@@ -1,0 +1,1641 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adit Pay Adoption Analyzer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ink:#16211D; --ink-soft:#4B584F; --paper:#F7F5EF; --surface:#FFFFFF;
+    --line:#E1DCCC; --line-strong:#C9C2AD;
+    --accent:#2F6F5E; --accent-strong:#1F5245; --accent-soft:#E4EEE9;
+    --amber:#B8702F; --amber-soft:#F7EADA;
+    --danger:#AE3B3B; --danger-soft:#F8E4E2;
+    --shadow: 0 1px 2px rgba(22,33,29,.06), 0 6px 20px rgba(22,33,29,.05);
+    --radius:14px; --radius-sm:9px;
+    font-size:16px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#EDEAE0; --ink-soft:#AEB6AC; --paper:#141B17; --surface:#1B241F;
+      --line:#2B3830; --line-strong:#3B4A41;
+      --accent:#59B99B; --accent-strong:#7ED4B6; --accent-soft:#1E3129;
+      --amber:#E0A15C; --amber-soft:#3A2A18;
+      --danger:#E28080; --danger-soft:#3A2020;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#EDEAE0; --ink-soft:#AEB6AC; --paper:#141B17; --surface:#1B241F;
+    --line:#2B3830; --line-strong:#3B4A41;
+    --accent:#59B99B; --accent-strong:#7ED4B6; --accent-soft:#1E3129;
+    --amber:#E0A15C; --amber-soft:#3A2A18;
+    --danger:#E28080; --danger-soft:#3A2020;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    padding:0 16px; padding-block:0;
+  }
+  h1,h2,h3,h4{font-family:"Fraunces","Georgia",serif; font-weight:600; text-wrap:balance; margin:0;}
+  .mono, .num{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums;}
+  a{color:var(--accent);}
+  button{font-family:inherit;}
+  .app{max-width:1280px;margin:0 auto;padding-bottom:64px;}
+
+  .topbar{
+    position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+    background:var(--paper); border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:16px 0; flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:center; gap:14px;}
+  .brand-mark{
+    width:44px;height:44px;border-radius:11px;background:var(--accent);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-family:"Fraunces",serif;
+    font-weight:700;font-size:17px;letter-spacing:-.02em;flex:none;
+  }
+  .brand h1{font-size:20px; line-height:1.2;}
+  .brand p{margin:2px 0 0; color:var(--ink-soft); font-size:13px;}
+  .topbar-actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+
+  .btn{
+    appearance:none; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink);
+    padding:9px 14px; border-radius:9px; font-size:13.5px; font-weight:500; cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px; transition:background .12s, border-color .12s;
+  }
+  .btn:hover{background:var(--accent-soft); border-color:var(--accent);}
+  .btn:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
+  .btn-primary{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .btn-primary:hover{background:var(--accent-strong); border-color:var(--accent-strong);}
+  .btn-primary:disabled{opacity:.5; cursor:not-allowed;}
+  .btn-ghost{border-color:transparent; background:transparent;}
+  .btn-ghost:hover{background:var(--accent-soft);}
+  .btn-sm{padding:6px 10px; font-size:12.5px;}
+
+  .panel{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:22px; margin-top:20px; box-shadow:var(--shadow);
+  }
+  .panel > h2{font-size:18px; margin-bottom:4px;}
+  .panel-sub{color:var(--ink-soft); font-size:13px; margin:0 0 16px;}
+  .section-eyebrow{
+    text-transform:uppercase; letter-spacing:.08em; font-size:11px; font-weight:600;
+    color:var(--accent); margin:0 0 6px;
+  }
+
+  /* Upload */
+  .dropzone{
+    border:1.5px dashed var(--line-strong); border-radius:var(--radius); padding:44px 20px;
+    text-align:center; cursor:pointer; transition:border-color .15s, background .15s;
+  }
+  .dropzone.drag{border-color:var(--accent); background:var(--accent-soft);}
+  .dropzone svg{color:var(--accent);}
+  .dropzone p{margin:14px 0 2px; font-size:15.5px;}
+  .dropzone .hint{color:var(--ink-soft); font-size:12.5px; margin-top:4px;}
+  .dropzone button{background:none;border:none;color:var(--accent);font-weight:600;cursor:pointer;padding:0;font-size:inherit;text-decoration:underline;}
+
+  .file-meta{
+    display:flex; gap:28px; flex-wrap:wrap; align-items:center; margin-top:18px; padding:14px 16px;
+    background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-sm);
+  }
+  .file-meta .fm-item{font-size:13px;}
+  .file-meta .fm-label{color:var(--ink-soft); display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:2px;}
+  .file-meta .fm-val{font-weight:600;}
+  .badge{
+    display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:99px;
+    font-size:11.5px; font-weight:600;
+  }
+  .badge-ok{background:var(--accent-soft); color:var(--accent-strong);}
+  .badge-warn{background:var(--amber-soft); color:var(--amber);}
+  .badge-bad{background:var(--danger-soft); color:var(--danger);}
+
+  .sheet-picker{margin-top:18px; padding:16px; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-sm);}
+  .sheet-picker select{margin-right:10px;}
+
+  select, input[type="text"], input[type="number"], input[type="date"], input[type="search"]{
+    border:1px solid var(--line-strong); background:var(--surface); color:var(--ink);
+    border-radius:8px; padding:7px 10px; font-size:13px; font-family:inherit;
+  }
+  select:focus, input:focus{outline:2px solid var(--accent); outline-offset:0; border-color:var(--accent);}
+
+  /* validation */
+  .val-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:14px 0;}
+  .val-tile{border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px 14px; background:var(--paper);}
+  .val-tile .vt-num{font-size:22px; font-weight:600;}
+  .val-tile .vt-label{font-size:12px; color:var(--ink-soft); margin-top:2px;}
+  .val-tile.warn .vt-num{color:var(--amber);}
+  .val-tile.bad .vt-num{color:var(--danger);}
+  .issues-table-wrap{max-height:280px; overflow:auto; border:1px solid var(--line); border-radius:var(--radius-sm); margin-top:12px;}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  thead th{
+    position:sticky; top:0; background:var(--paper); text-align:left; font-size:11px;
+    text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); padding:8px 10px;
+    border-bottom:1px solid var(--line); white-space:nowrap;
+  }
+  tbody td{padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:var(--accent-soft);}
+
+  /* KPI grid */
+  .kpi-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:14px; margin-top:20px;}
+  .kpi-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 18px 16px; box-shadow:var(--shadow); position:relative; overflow:hidden;
+  }
+  .kpi-card .kpi-label{font-size:12px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em;}
+  .kpi-card .kpi-val{font-size:26px; font-weight:600; margin-top:6px; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;}
+  .kpi-card .kpi-sub{font-size:12px; color:var(--ink-soft); margin-top:4px;}
+  .kpi-card.accent{border-color:var(--accent);}
+  .kpi-card.accent::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent);}
+  .kpi-card.amber::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--amber);}
+
+  /* narrative strip */
+  .narrative{
+    margin:16px 2px 0; font-family:"Fraunces","Georgia",serif; font-size:19px; line-height:1.45;
+    color:var(--ink); font-weight:500; text-wrap:balance; max-width:78ch;
+  }
+  .narrative strong{color:var(--accent-strong); font-weight:700;}
+  .narrative .n-amber{color:var(--amber); font-weight:700;}
+
+  /* charts */
+  .hero-panel{background:linear-gradient(165deg, var(--accent-soft), var(--surface) 55%);}
+  .hero-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:14px;}
+  .hero-card{border-color:var(--line-strong);}
+  .chart-wrap.hero{height:280px;}
+  .charts-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; margin-top:20px;}
+  .chart-card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow); transition:box-shadow .15s, transform .15s;}
+  .chart-card h3{font-size:14px; margin-bottom:2px;}
+  .chart-card .chart-sub{font-size:12px; color:var(--ink-soft); margin:0 0 10px;}
+  .chart-wrap{position:relative; height:230px;}
+  .chart-wrap.small{height:180px;}
+
+  /* tier tables */
+  .tier-table td.clickable{cursor:pointer; color:var(--accent); font-weight:600;}
+  .tier-table td.clickable:hover{text-decoration:underline;}
+  tfoot td{font-weight:700; border-top:2px solid var(--line-strong); background:var(--paper);}
+
+  /* filters */
+  .filters-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px;}
+  .filter-group{display:flex; flex-direction:column; gap:6px; min-width:0;}
+  .filter-wide{grid-column:span 2;}
+  .filter-group label{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); font-weight:600;}
+  .ms{position:relative;}
+  .ms summary{
+    list-style:none; cursor:pointer; border:1px solid var(--line-strong); border-radius:8px;
+    padding:7px 10px; font-size:13px; background:var(--surface); display:flex; justify-content:space-between; align-items:center;
+  }
+  .ms summary::-webkit-details-marker{display:none;}
+  .ms summary .chev{color:var(--ink-soft); font-size:11px;}
+  .ms-panel{
+    position:absolute; z-index:30; top:calc(100% + 4px); left:0; min-width:220px; max-width:280px;
+    background:var(--surface); border:1px solid var(--line-strong); border-radius:9px; box-shadow:var(--shadow);
+    padding:8px; max-height:260px; overflow:auto;
+  }
+  .ms-panel input[type="search"]{width:100%; margin-bottom:6px;}
+  .ms-panel label{display:flex; gap:7px; align-items:center; font-size:12.5px; padding:4px 4px; font-weight:400; text-transform:none; letter-spacing:0; cursor:pointer; color:var(--ink);}
+  .ms-panel label:hover{background:var(--accent-soft); border-radius:5px;}
+  .range-row{display:flex; gap:6px; min-width:0;}
+  .range-row input{width:100%; min-width:0;}
+  .preset-row{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;}
+  .preset-row button{
+    border:1px solid var(--line-strong); background:var(--surface); border-radius:7px; padding:5px 9px;
+    font-size:12px; cursor:pointer;
+  }
+  .preset-row button.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .filters-foot{display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:14px; border-top:1px solid var(--line);}
+  .filter-count{font-size:12.5px; color:var(--ink-soft);}
+
+  /* reconciliation */
+  .recon-banner{display:flex; gap:10px; align-items:center; padding:12px 16px; border-radius:var(--radius-sm); margin-top:20px; font-size:13.5px; font-weight:500;}
+  .recon-ok{background:var(--accent-soft); color:var(--accent-strong); border:1px solid var(--accent);}
+  .recon-bad{background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger);}
+
+  /* opportunity + active analysis */
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px;}
+  .stat-tile{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px 14px;}
+  .stat-tile .st-val{font-size:19px; font-weight:600; font-family:"IBM Plex Mono",monospace;}
+  .stat-tile .st-lbl{font-size:12px; color:var(--ink-soft); margin-top:2px;}
+  .opp-row{display:flex; gap:12px; flex-wrap:wrap; margin-top:14px;}
+  .opp-card{flex:1; min-width:150px; background:var(--accent-soft); border:1px solid var(--accent); border-radius:var(--radius-sm); padding:14px;}
+  .opp-card .opp-num{font-size:22px; font-weight:700; color:var(--accent-strong); font-family:"IBM Plex Mono",monospace;}
+  .opp-card .opp-lbl{font-size:12.5px; color:var(--ink-soft); margin-top:3px;}
+
+  /* explorer */
+  .explorer-toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px;}
+  .explorer-toolbar input[type="search"]{flex:1; min-width:200px;}
+  th.sortable{cursor:pointer; user-select:none;}
+  th.sortable .arrow{margin-left:3px; opacity:.5;}
+  th.sortable.active .arrow{opacity:1; color:var(--accent);}
+  .table-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius-sm);}
+  .pager{display:flex; gap:10px; align-items:center; justify-content:flex-end; margin-top:10px; font-size:12.5px; color:var(--ink-soft);}
+
+  /* modal */
+  .modal{position:fixed; inset:0; background:rgba(20,24,20,.5); z-index:100; display:flex; align-items:center; justify-content:center; padding:20px;}
+  .modal-card{
+    background:var(--surface); border-radius:var(--radius); max-width:960px; width:100%; max-height:86vh;
+    display:flex; flex-direction:column; box-shadow:var(--shadow); border:1px solid var(--line);
+  }
+  .modal-card header{display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--line);}
+  .modal-card header h3{font-size:16px;}
+  .modal-card .modal-body{padding:16px 20px; overflow:auto;}
+  .modal-close{background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-soft); line-height:1;}
+
+  .export-menu{position:relative;}
+  .export-panel{
+    position:absolute; right:0; top:calc(100% + 6px); background:var(--surface); border:1px solid var(--line-strong);
+    border-radius:9px; box-shadow:var(--shadow); padding:6px; z-index:30; min-width:170px;
+  }
+  .export-panel button{
+    display:flex; width:100%; text-align:left; padding:8px 10px; border-radius:6px; border:none; background:none;
+    font-size:13px; cursor:pointer; color:var(--ink);
+  }
+  .export-panel button:hover{background:var(--accent-soft);}
+
+  .empty-note{color:var(--ink-soft); font-size:13px; padding:20px; text-align:center;}
+  [hidden]{display:none !important;}
+
+  @media (max-width:640px){
+    .topbar{flex-direction:column; align-items:flex-start;}
+    .panel{padding:16px;}
+    .kpi-card .kpi-val{font-size:22px;}
+    .filters-grid{grid-template-columns:1fr;}
+    .filter-wide{grid-column:auto;}
+    .ms-panel{left:auto; right:0; max-width:calc(100vw - 64px);}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">AP</span>
+      <div>
+        <h1>Adit Pay Terminal Adoption Analyzer</h1>
+        <p>Upload terminal data to automatically generate adoption and processing-volume insights.</p>
+      </div>
+    </div>
+    <div class="topbar-actions" id="topbarActions" hidden>
+      <button class="btn" id="btnToggleFilters">Filters <span id="filterActiveDot" hidden style="width:6px;height:6px;border-radius:99px;background:var(--amber);display:inline-block;"></span></button>
+      <div class="export-menu">
+        <button class="btn btn-primary" id="btnExportToggle">Export Report</button>
+        <div class="export-panel" id="exportPanel" hidden>
+          <button data-export="xlsx">Excel workbook (.xlsx)</button>
+          <button data-export="csv">Deal data (.csv)</button>
+          <button data-export="pdf">Summary (.pdf)</button>
+        </div>
+      </div>
+      <button class="btn btn-ghost" id="btnNewFile">New file</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="uploadSection" class="panel upload-panel">
+      <p class="section-eyebrow">Step 1 &middot; 2</p>
+      <h2>Upload raw deal data</h2>
+      <p class="panel-sub">Drop the raw Adit Pay export below. Nothing is uploaded anywhere &mdash; the file is processed entirely in this browser tab.</p>
+
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload file">
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden />
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+        <p>Drag &amp; drop your file, or <button type="button" id="browseBtn">browse</button></p>
+        <p class="hint">.xlsx &middot; .xls &middot; .csv</p>
+      </div>
+
+      <div class="file-meta" id="fileMeta" hidden></div>
+      <div class="sheet-picker" id="sheetPicker" hidden></div>
+      <div id="validationPanel" hidden></div>
+      <div id="generateRow" hidden style="margin-top:18px;">
+        <button class="btn btn-primary" id="generateBtn">Generate Analysis &rarr;</button>
+      </div>
+    </section>
+
+    <section id="dashboard" hidden>
+      <div id="reconciliationBanner"></div>
+
+      <section class="panel" id="filtersPanel" hidden>
+        <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
+          <div>
+            <p class="section-eyebrow">Filters</p>
+            <h2 style="font-size:16px;">Narrow the dataset</h2>
+          </div>
+        </div>
+        <div class="filters-grid" id="filtersGrid" style="margin-top:14px;"></div>
+        <div class="filters-foot">
+          <span class="filter-count" id="filterCount"></span>
+          <button class="btn btn-sm" id="btnResetFilters">Reset filters</button>
+        </div>
+      </section>
+
+      <section class="kpi-grid" id="kpiGrid"></section>
+
+      <p class="narrative" id="narrativeStrip"></p>
+
+      <section class="panel hero-panel">
+        <p class="section-eyebrow">At a glance</p>
+        <h2 style="font-size:16px; margin-bottom:14px;">Adoption story</h2>
+        <div class="hero-grid">
+          <div class="chart-card hero-card">
+            <h3>Adoption rate</h3><p class="chart-sub">Adopted &divide; total terminal deals</p>
+            <div class="chart-wrap hero"><canvas id="chartRate"></canvas></div>
+          </div>
+          <div class="chart-card hero-card">
+            <h3>Adoption funnel</h3><p class="chart-sub">Total &rarr; active &rarr; adopted</p>
+            <div class="chart-wrap hero"><canvas id="chartFunnel"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <p class="section-eyebrow">Visual summary</p>
+        <h2 style="font-size:16px; margin-bottom:14px;">Volume tier breakdown</h2>
+        <div class="charts-grid" id="chartsGrid">
+          <div class="chart-card"><h3>Adopted deals by volume tier</h3><p class="chart-sub">Volume range vs. deal count</p><div class="chart-wrap"><canvas id="chartAdoptedTier"></canvas></div></div>
+          <div class="chart-card"><h3>Active deals by volume tier</h3><p class="chart-sub">Volume range vs. deal count</p><div class="chart-wrap"><canvas id="chartActiveTier"></canvas></div></div>
+          <div class="chart-card"><h3>Adopted volume distribution</h3><p class="chart-sub">Volume range vs. total tier volume ($)</p><div class="chart-wrap"><canvas id="chartAdoptedVolume"></canvas></div></div>
+        </div>
+      </section>
+
+      <section class="panel" id="adoptedSummarySection"></section>
+      <section class="panel" id="activeSummarySection"></section>
+      <section class="panel" id="granularSection"></section>
+      <section class="panel" id="activeAnalysisSection"></section>
+      <section class="panel" id="opportunitySection"></section>
+
+      <section class="panel" id="explorerSection">
+        <p class="section-eyebrow">Deal-level drilldown</p>
+        <h2 style="font-size:16px;">Explore every deal</h2>
+        <p class="panel-sub">Click any tier count above to jump here pre-filtered, or search and sort freely.</p>
+        <div class="explorer-toolbar">
+          <input type="search" id="explorerSearch" placeholder="Search deal name, record #, CSM, pod, tech OB&hellip;">
+          <span class="filter-count" id="explorerCount"></span>
+          <button class="btn btn-sm btn-ghost" id="explorerClearTier" hidden>Clear tier filter</button>
+        </div>
+        <div class="table-scroll">
+          <table id="explorerTable">
+            <thead><tr></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="pager" id="explorerPager"></div>
+      </section>
+
+      <section class="panel" id="validationDetailSection"></section>
+    </section>
+  </main>
+
+  <div class="modal" id="drilldownModal" hidden>
+    <div class="modal-card">
+      <header><h3 id="drilldownTitle"></h3><button class="modal-close" id="drilldownClose">&times;</button></header>
+      <div class="modal-body" id="drilldownBody"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ============================== constants ============================== */
+
+var ADOPT_THRESHOLD = 5000;
+
+var CANON_FIELDS = {
+  dealName:        {label:"Deal Name",              aliases:["dealname"], required:true},
+  recordNumber:    {label:"Record Number",           aliases:["recordnumber","recordno","recordnum","record#"], required:true},
+  terminalCount:   {label:"Terminal Count",          aliases:["terminalcount","terminals"], required:true},
+  package:         {label:"Package",                 aliases:["package","primarypackage"], required:false},
+  stage:           {label:"Stage",                   aliases:["stage"], required:false},
+  payStatus:       {label:"Pay Status",               aliases:["paystatus"], required:false},
+  payScore:        {label:"Pay Score",                aliases:["payscore"], required:false},
+  aditPayVolume:   {label:"Adit Pay Volume",          aliases:["aditpayvolume","payvolume","aditpayvol"], required:true},
+  payAdoptDate:    {label:"Pay Adopt Date",           aliases:["payadoptdate","adoptdate"], required:false},
+  csm:             {label:"CSM",                      aliases:["csm"], required:false},
+  csmPod:          {label:"CSM Pod",                  aliases:["csmpod"], required:false},
+  techOb:          {label:"Tech OB",                  aliases:["techob"], required:false},
+  agreementSignedDate: {label:"Agreement Signed Date", aliases:["agreementsigneddate","signeddate"], required:false}
+};
+var REQUIRED_KEYS = Object.keys(CANON_FIELDS).filter(function(k){return CANON_FIELDS[k].required;});
+
+function centsRange(label,minD,maxD){ return {label:label, min: minD==null?null:Math.round(minD*100), max: maxD==null?Infinity:Math.round(maxD*100)}; }
+
+var ADOPTED_TIERS = [
+  centsRange("$5,000 - $7,500", 5000, 7500),
+  centsRange("$7,501 - $10,000", 7500.01, 10000),
+  centsRange("$10,001 - $15,000", 10000.01, 15000),
+  centsRange("$15,001 - $20,000", 15000.01, 20000),
+  centsRange("$20,001 - $25,000", 20000.01, 25000),
+  centsRange("$25,001 - $30,000", 25000.01, 30000),
+  centsRange("$30,001 - $40,000", 30000.01, 40000),
+  centsRange("$40,001 - $50,000", 40000.01, 50000),
+  centsRange("$50,001 - $75,000", 50000.01, 75000),
+  centsRange("$75,001 - $100,000", 75000.01, 100000),
+  centsRange("$100,001 - $150,000", 100000.01, 150000),
+  centsRange("$150,001 - $200,000", 150000.01, 200000),
+  centsRange("$200,000+", 200000.01, null)
+];
+
+var ACTIVE_TIERS = [
+  centsRange("$0", 0, 0),
+  centsRange("$0.01 - $500", 0.01, 500),
+  centsRange("$500.01 - $1,000", 500.01, 1000),
+  centsRange("$1,000.01 - $1,500", 1000.01, 1500),
+  centsRange("$1,500.01 - $2,000", 1500.01, 2000),
+  centsRange("$2,000.01 - $2,500", 2000.01, 2500),
+  centsRange("$2,500.01 - $3,000", 2500.01, 3000),
+  centsRange("$3,000.01 - $3,500", 3000.01, 3500),
+  centsRange("$3,500.01 - $4,000", 3500.01, 4000),
+  centsRange("$4,000.01 - $4,500", 4000.01, 4500),
+  centsRange("$4,500.01 - $5,000", 4500.01, 4999.99)
+];
+
+var GRANULAR_TIERS = [
+  centsRange("$5,000 - $7,500", 5000, 7500),
+  centsRange("$7,501 - $10,000", 7500.01, 10000),
+  centsRange("$10,001 - $12,500", 10000.01, 12500),
+  centsRange("$12,501 - $15,000", 12500.01, 15000),
+  centsRange("$15,001 - $17,500", 15000.01, 17500),
+  centsRange("$17,501 - $20,000", 17500.01, 20000),
+  centsRange("$20,001 - $22,500", 20000.01, 22500),
+  centsRange("$22,501 - $25,000", 22500.01, 25000),
+  centsRange("$25,001 - $27,500", 25000.01, 27500),
+  centsRange("$27,501 - $30,000", 27500.01, 30000),
+  centsRange("$30,000+", 30000.01, null)
+];
+
+function findTier(volume, tiers){
+  var c = Math.round(volume*100);
+  for (var i=0;i<tiers.length;i++){
+    var t = tiers[i];
+    if (c >= t.min && c <= t.max) return t;
+  }
+  return tiers[tiers.length-1];
+}
+
+var CHART_COLORS = {
+  adopted: "#2F6F5E", adoptedSoft:"rgba(47,111,94,.28)",
+  active: "#B8702F", activeSoft:"rgba(184,112,47,.28)",
+  danger: "#AE3B3B", grid:"rgba(120,120,110,.18)"
+};
+
+/* ============================== formatters ============================== */
+
+function fmtMoney(v){ if(v==null||isNaN(v)) return "$0"; var n=Number(v); var s=Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); return (n<0?"-$":"$")+s; }
+function fmtMoney0(v){ if(v==null||isNaN(v)) return "$0"; var n=Math.round(v); return (n<0?"-$":"$")+Math.abs(n).toLocaleString("en-US"); }
+function fmtInt(v){ if(v==null||isNaN(v)) return "0"; return Math.round(v).toLocaleString("en-US"); }
+function fmtPct(v,d){ if(v==null||isNaN(v)) return "0%"; return (v*100).toFixed(d==null?1:d)+"%"; }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];}); }
+function normHeader(h){ return String(h==null?"":h).trim().toLowerCase().replace(/[^a-z0-9]/g,""); }
+
+function excelSerialToDate(n){
+  var utc = Math.round((n - 25569) * 86400 * 1000);
+  return new Date(utc);
+}
+function parseDateLoose(v){
+  if (v==null || v==="") return null;
+  if (v instanceof Date && !isNaN(v)) return v;
+  if (typeof v === "number") return excelSerialToDate(v);
+  var s = String(v).trim();
+  if (!s) return null;
+  var d = new Date(s);
+  if (!isNaN(d)) return d;
+  var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (m){
+    var yr = m[3].length===2 ? ("20"+m[3]) : m[3];
+    d = new Date(Number(yr), Number(m[1])-1, Number(m[2]));
+    if (!isNaN(d)) return d;
+  }
+  return null;
+}
+function parseVolume(v){
+  if (v==null || v==="" ) return {value:null, blank:true, valid:true};
+  if (typeof v === "number"){ return {value:v, blank:false, valid:!isNaN(v)}; }
+  var s = String(v).trim();
+  if (s==="") return {value:null, blank:true, valid:true};
+  var neg = /^\(.*\)$/.test(s);
+  s = s.replace(/[()$,\s]/g,"");
+  if (s==="") return {value:null, blank:true, valid:true};
+  var n = parseFloat(s);
+  if (isNaN(n)) return {value:v, blank:false, valid:false};
+  if (neg) n = -Math.abs(n);
+  return {value:n, blank:false, valid:true};
+}
+
+/* ============================== state ============================== */
+
+var App = {
+  workbook:null, sheetNames:[], chosenSheet:null,
+  fileName:null,
+  headers:[], colMap:{}, // canonicalKey -> actual header string
+  allDataRows:[],        // raw parsed row objects (post header mapping), 1 per source row (excluding true blank rows)
+  validation:null,       // validation summary object
+  processed:[],          // array of processed row records (only included rows)
+  charts:{},
+  filters:{
+    adoptionStatus:{Adopted:true, Active:true},
+    dateField:"agreementSignedDate",
+    dateFrom:null, dateTo:null, datePreset:null,
+    stage:{}, payStatus:{}, package:{}, csm:{}, csmPod:{}, techOb:{},
+    terminalMin:null, terminalMax:null,
+    volMin:null, volMax:null
+  },
+  distinctValues:{},
+  explorer:{ search:"", sortKey:"aditPayVolume", sortDir:"desc", page:1, pageSize:50, tierFilter:null },
+  downloadsNs:null
+};
+
+/* ============================== file intake ============================== */
+
+var dropzone = document.getElementById("dropzone");
+var fileInput = document.getElementById("fileInput");
+var browseBtn = document.getElementById("browseBtn");
+
+browseBtn.addEventListener("click", function(e){ e.stopPropagation(); fileInput.click(); });
+dropzone.addEventListener("click", function(){ fileInput.click(); });
+dropzone.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ fileInput.click(); } });
+["dragenter","dragover"].forEach(function(ev){
+  dropzone.addEventListener(ev, function(e){ e.preventDefault(); dropzone.classList.add("drag"); });
+});
+["dragleave","drop"].forEach(function(ev){
+  dropzone.addEventListener(ev, function(e){ e.preventDefault(); dropzone.classList.remove("drag"); });
+});
+dropzone.addEventListener("drop", function(e){
+  var f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+fileInput.addEventListener("change", function(e){
+  var f = e.target.files && e.target.files[0];
+  if (f) handleFile(f);
+});
+
+document.getElementById("btnNewFile").addEventListener("click", function(){ location_reset(); });
+
+function location_reset(){
+  App.workbook=null; App.sheetNames=[]; App.chosenSheet=null; App.fileName=null;
+  App.headers=[]; App.colMap={}; App.allDataRows=[]; App.validation=null; App.processed=[];
+  fileInput.value="";
+  document.getElementById("fileMeta").hidden=true;
+  document.getElementById("sheetPicker").hidden=true;
+  document.getElementById("validationPanel").hidden=true;
+  document.getElementById("generateRow").hidden=true;
+  document.getElementById("dashboard").hidden=true;
+  document.getElementById("topbarActions").hidden=true;
+  document.getElementById("uploadSection").hidden=false;
+  destroyCharts();
+}
+
+function handleFile(file){
+  App.fileName = file.name;
+  var ext = (file.name.split(".").pop()||"").toLowerCase();
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var wb;
+      if (ext === "csv"){
+        wb = XLSX.read(e.target.result, {type:"string", cellDates:true, raw:true});
+      } else {
+        wb = XLSX.read(e.target.result, {type:"array", cellDates:true, raw:true});
+      }
+      App.workbook = wb;
+      App.sheetNames = wb.SheetNames.slice();
+      chooseInitialSheet();
+    } catch(err){
+      alert("Could not read this file: " + err.message);
+    }
+  };
+  if (ext === "csv") reader.readAsText(file); else reader.readAsArrayBuffer(file);
+}
+
+function chooseInitialSheet(){
+  var picker = document.getElementById("sheetPicker");
+  var match = App.sheetNames.find(function(n){ var nn=n.trim().toLowerCase(); return nn==="sheet0"||nn==="sheet 0"; });
+  if (!match) match = App.sheetNames.find(function(n){ return n.trim().toLowerCase()==="zero"; });
+
+  if (match && App.sheetNames.length===1){
+    picker.hidden = true;
+    loadSheet(match);
+    return;
+  }
+  if (match){
+    // still show a lightweight picker so the user can override, pre-selected to the match
+    renderSheetPicker(match);
+  } else {
+    renderSheetPicker(App.sheetNames[0]);
+  }
+}
+
+function renderSheetPicker(preselect){
+  var picker = document.getElementById("sheetPicker");
+  var opts = App.sheetNames.map(function(n){
+    var ws = App.workbook.Sheets[n];
+    var ref = ws && ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : null;
+    var rows = ref ? (ref.e.r - ref.s.r) : 0;
+    return '<option value="'+esc(n)+'"'+(n===preselect?" selected":"")+'>'+esc(n)+" ("+rows+" rows)</option>";
+  }).join("");
+  picker.innerHTML =
+    '<label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:8px;">'+
+    (App.sheetNames.some(function(n){var nn=n.trim().toLowerCase(); return nn==="sheet0"||nn==="zero";}) ? "Confirm the raw-data worksheet:" : "“Sheet0” was not found &mdash; choose the raw-data worksheet:") +
+    '</label>'+
+    '<select id="sheetSelect">'+opts+'</select>'+
+    '<button class="btn btn-primary btn-sm" id="sheetContinue" style="margin-left:8px;">Use this sheet</button>';
+  picker.hidden = false;
+  document.getElementById("sheetContinue").addEventListener("click", function(){
+    loadSheet(document.getElementById("sheetSelect").value);
+  });
+}
+
+function loadSheet(sheetName){
+  App.chosenSheet = sheetName;
+  var ws = App.workbook.Sheets[sheetName];
+  var aoa = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+  if (!aoa.length){ alert("This sheet has no data."); return; }
+  var rawHeaders = aoa[0].map(function(h){ return h==null? "": String(h).trim(); });
+  App.headers = rawHeaders;
+  buildColumnMap(rawHeaders);
+
+  var missing = REQUIRED_KEYS.filter(function(k){ return !App.colMap[k]; });
+  App.allDataRows = aoa.slice(1);
+
+  renderFileMeta(missing);
+  if (missing.length){
+    renderValidation({stop:true, missing:missing});
+    document.getElementById("generateRow").hidden = true;
+    return;
+  }
+  runValidation();
+}
+
+function buildColumnMap(rawHeaders){
+  App.colMap = {};
+  var normed = rawHeaders.map(normHeader);
+  Object.keys(CANON_FIELDS).forEach(function(key){
+    var aliases = CANON_FIELDS[key].aliases;
+    for (var i=0;i<normed.length;i++){
+      if (aliases.indexOf(normed[i]) !== -1){ App.colMap[key] = rawHeaders[i]; break; }
+    }
+  });
+}
+
+function renderFileMeta(missing){
+  var el = document.getElementById("fileMeta");
+  el.hidden = false;
+  el.innerHTML =
+    fmItem("File", App.fileName) +
+    fmItem("Rows found", fmtInt(App.allDataRows.length)) +
+    fmItem("Worksheet", App.chosenSheet) +
+    fmItem("Status", missing.length ? '<span class="badge badge-bad">Missing required columns</span>' : '<span class="badge badge-ok">Columns recognized</span>');
+  document.getElementById("sheetPicker").hidden = !!document.getElementById("sheetSelect") ? document.getElementById("sheetPicker").hidden : true;
+}
+function fmItem(label,val){ return '<div class="fm-item"><span class="fm-label">'+esc(label)+'</span><span class="fm-val">'+val+'</span></div>'; }
+
+/* ============================== validation ============================== */
+
+function runValidation(){
+  var idx = {};
+  Object.keys(App.colMap).forEach(function(k){ idx[k] = App.headers.indexOf(App.colMap[k]); });
+
+  var totalRows = App.allDataRows.length;
+  var seenRecordNumbers = {};
+  App.allDataRows.forEach(function(r){
+    var rn = idx.recordNumber!=null && idx.recordNumber>=0 ? r[idx.recordNumber] : null;
+    if (rn!=null && String(rn).trim()!==""){
+      var key = String(rn).trim();
+      seenRecordNumbers[key] = (seenRecordNumbers[key]||0)+1;
+    }
+  });
+
+  var rows = [];
+  var excludedCount=0, warnCount=0, cleanCount=0;
+  var issues = []; // {rowNum, reason, severity, detail}
+
+  App.allDataRows.forEach(function(raw, i){
+    var rowNum = i+2; // account for header row, 1-indexed sheet rows
+    var isBlank = raw.every(function(c){ return c==null || String(c).trim()===""; });
+    if (isBlank){
+      excludedCount++;
+      issues.push({rowNum:rowNum, severity:"excluded", reason:"Blank row", detail:"All fields empty"});
+      return;
+    }
+
+    function get(key){ var i2=idx[key]; return (i2!=null && i2>=0) ? raw[i2] : null; }
+
+    var dealName = get("dealName");
+    var recordNumber = get("recordNumber");
+    var terminalCount = get("terminalCount");
+    var volRaw = get("aditPayVolume");
+    var payStatus = get("payStatus");
+
+    var volParsed = parseVolume(volRaw);
+    var warnings = [];
+    var excludeReason = null;
+
+    if (!volParsed.valid){
+      excludeReason = "Non-numeric Adit Pay Volume (“"+esc(String(volRaw))+"”)";
+    } else if (!volParsed.blank && volParsed.value < 0){
+      excludeReason = "Negative Adit Pay Volume ("+fmtMoney(volParsed.value)+")";
+    }
+
+    var recordKey = (recordNumber!=null && String(recordNumber).trim()!=="") ? String(recordNumber).trim() : null;
+    if (!recordKey){ warnings.push("Missing Record Number"); }
+    else if (seenRecordNumbers[recordKey] > 1){ warnings.push("Duplicate Record Number (“"+esc(recordKey)+"” appears "+seenRecordNumbers[recordKey]+"×)"); }
+
+    if (dealName==null || String(dealName).trim()===""){ warnings.push("Blank Deal Name"); }
+    if (terminalCount==null || String(terminalCount).trim()===""){ warnings.push("Missing Terminal Count"); }
+
+    var blankVolAssumedZero = false;
+    if (volParsed.valid && volParsed.blank){ warnings.push("Blank Adit Pay Volume — assumed $0"); blankVolAssumedZero = true; }
+
+    if (payStatus!=null && String(payStatus).trim()!==""){
+      var psn = String(payStatus).trim().toLowerCase();
+      if (psn!=="enabled" && psn!=="disabled"){ warnings.push("Unexpected Pay Status value (“"+esc(String(payStatus))+"”)"); }
+    }
+
+    if (excludeReason){
+      excludedCount++;
+      issues.push({rowNum:rowNum, severity:"excluded", reason:excludeReason, detail:dealName||"(unnamed)"});
+      return;
+    }
+
+    if (warnings.length){ warnCount++; warnings.forEach(function(w){ issues.push({rowNum:rowNum, severity:"warning", reason:w, detail:dealName||"(unnamed)"}); }); }
+    else { cleanCount++; }
+
+    var effVol = volParsed.blank ? 0 : volParsed.value;
+    rows.push({
+      _rowNum: rowNum,
+      _warnings: warnings,
+      _recordKey: recordKey,
+      _isDuplicate: recordKey ? seenRecordNumbers[recordKey] > 1 : false,
+      _blankVolAssumed: blankVolAssumedZero,
+      dealName: (dealName==null || String(dealName).trim()==="") ? "(Unnamed Deal)" : String(dealName).trim(),
+      recordNumber: recordKey || ("(missing-"+rowNum+")"),
+      terminalCount: terminalCount==null? null : Number(terminalCount)||terminalCount,
+      package: get("package"),
+      stage: get("stage"),
+      payStatus: payStatus,
+      payScore: get("payScore"),
+      aditPayVolume: effVol,
+      payAdoptDate: parseDateLoose(get("payAdoptDate")),
+      csm: get("csm"),
+      csmPod: get("csmPod"),
+      techOb: get("techOb"),
+      agreementSignedDate: parseDateLoose(get("agreementSignedDate"))
+    });
+  });
+
+  App.processed = rows;
+  App.validation = {
+    totalRows: totalRows,
+    validRecords: cleanCount,
+    warnRecords: warnCount,
+    excludedRecords: excludedCount,
+    includedRecords: rows.length,
+    issues: issues
+  };
+
+  renderValidation({stop:false});
+  document.getElementById("generateRow").hidden = false;
+}
+
+function renderValidation(opts){
+  var panel = document.getElementById("validationPanel");
+  panel.hidden = false;
+
+  if (opts.stop){
+    panel.innerHTML =
+      '<div class="val-tile bad" style="border-color:var(--danger);">'+
+      '<h3 style="font-size:15px;color:var(--danger);margin-bottom:6px;">Missing required columns</h3>'+
+      '<p style="font-size:13px;margin:0 0 8px;">This file is missing: <strong>'+opts.missing.map(function(k){return esc(CANON_FIELDS[k].label);}).join(", ")+'</strong>. '+
+      'Processing cannot continue until the raw data includes these columns (any header spelling/casing is fine).</p>'+
+      '<p style="font-size:12.5px;color:var(--ink-soft);margin:0;">Detected headers: '+esc(App.headers.filter(Boolean).join(", "))+'</p>'+
+      '</div>';
+    return;
+  }
+
+  var v = App.validation;
+  var tiles =
+    valTile(fmtInt(v.totalRows), "Total rows uploaded", "") +
+    valTile(fmtInt(v.validRecords), "Valid records", "") +
+    valTile(fmtInt(v.warnRecords), "Records with warnings", v.warnRecords? "warn":"") +
+    valTile(fmtInt(v.excludedRecords), "Records excluded", v.excludedRecords? "bad":"");
+
+  var issuesRows = v.issues.slice(0,500).map(function(is){
+    return "<tr><td>"+is.rowNum+"</td><td>"+esc(is.detail)+"</td>"+
+      '<td><span class="badge '+(is.severity==="excluded"?"badge-bad":"badge-warn")+'">'+(is.severity==="excluded"?"Excluded":"Warning")+"</span></td>"+
+      "<td>"+esc(is.reason)+"</td></tr>";
+  }).join("");
+
+  panel.innerHTML =
+    '<h3 style="font-size:15px;margin:18px 0 2px;">Data validation</h3>'+
+    '<p class="panel-sub" style="margin-top:2px;">Every row is kept and shown below &mdash; nothing is silently dropped.</p>'+
+    '<div class="val-grid">'+tiles+'</div>'+
+    (v.issues.length ? (
+      '<div class="issues-table-wrap"><table><thead><tr><th>Row</th><th>Deal</th><th>Type</th><th>Reason</th></tr></thead><tbody>'+issuesRows+'</tbody></table></div>'+
+      (v.issues.length>500 ? '<p style="font-size:12px;color:var(--ink-soft);margin-top:6px;">Showing first 500 of '+v.issues.length+' flagged rows. Full detail is included in the export.</p>' : '')
+    ) : '<p style="font-size:13px;color:var(--ink-soft);">No data quality issues found.</p>');
+}
+function valTile(num,label,cls){ return '<div class="val-tile '+cls+'"><div class="vt-num">'+num+'</div><div class="vt-label">'+esc(label)+'</div></div>'; }
+
+document.getElementById("generateBtn").addEventListener("click", function(){
+  buildDistinctValues();
+  buildFilterUI();
+  document.getElementById("uploadSection").hidden = true;
+  document.getElementById("dashboard").hidden = false;
+  document.getElementById("topbarActions").hidden = false;
+  renderAll();
+  window.scrollTo({top:0, behavior:"smooth"});
+});
+
+/* ============================== filters ============================== */
+
+function buildDistinctValues(){
+  function distinct(key){
+    var set = {};
+    App.processed.forEach(function(r){ var v=r[key]; if (v!=null && String(v).trim()!=="") set[String(v).trim()]=true; });
+    return Object.keys(set).sort();
+  }
+  App.distinctValues = {
+    stage: distinct("stage"), payStatus: distinct("payStatus"), package: distinct("package"),
+    csm: distinct("csm"), csmPod: distinct("csmPod"), techOb: distinct("techOb")
+  };
+  ["stage","payStatus","package","csm","csmPod","techOb"].forEach(function(k){
+    App.filters[k] = {};
+  });
+}
+
+function buildFilterUI(){
+  var grid = document.getElementById("filtersGrid");
+
+  function msGroup(id,label,values,filterKey){
+    var opts = values.map(function(v){
+      return '<label><input type="checkbox" data-ms="'+filterKey+'" value="'+esc(v)+'"> '+esc(v)+'</label>';
+    }).join("");
+    return '<div class="filter-group"><label>'+esc(label)+'</label>'+
+      '<details class="ms" id="'+id+'"><summary><span id="'+id+'Sum">All</span><span class="chev">▾</span></summary>'+
+      '<div class="ms-panel"><input type="search" placeholder="Filter…" data-mssearch="'+filterKey+'">'+
+      '<div data-msopts="'+filterKey+'">'+opts+'</div></div></details></div>';
+  }
+
+  grid.innerHTML =
+    '<div class="filter-group"><label>Adoption Status</label>'+
+      '<div style="display:flex;gap:12px;padding-top:4px;">'+
+      '<label style="display:flex;gap:5px;align-items:center;font-weight:400;font-size:13px;"><input type="checkbox" id="fAdopted" checked> Adopted</label>'+
+      '<label style="display:flex;gap:5px;align-items:center;font-weight:400;font-size:13px;"><input type="checkbox" id="fActive" checked> Active</label>'+
+      '</div></div>'+
+
+    '<div class="filter-group"><label>Date field</label>'+
+      '<select id="fDateField"><option value="agreementSignedDate">Agreement Signed Date</option><option value="payAdoptDate">Pay Adopt Date</option></select></div>'+
+
+    '<div class="filter-group filter-wide"><label>Date range</label>'+
+      '<div class="preset-row" id="datePresets">'+
+        ['This Month','Last Month','Last 30 Days','Last 90 Days','YTD'].map(function(p){return '<button type="button" data-preset="'+p+'">'+p+'</button>';}).join("")+
+        '<button type="button" data-preset="All">All time</button>'+
+      '</div>'+
+      '<div class="range-row"><input type="date" id="fDateFrom"><input type="date" id="fDateTo"></div></div>'+
+
+    msGroup("msStage","Stage",App.distinctValues.stage,"stage") +
+    msGroup("msPayStatus","Pay Status",App.distinctValues.payStatus,"payStatus") +
+    msGroup("msPackage","Package",App.distinctValues.package,"package") +
+    msGroup("msCsm","CSM",App.distinctValues.csm,"csm") +
+    msGroup("msCsmPod","CSM Pod",App.distinctValues.csmPod,"csmPod") +
+    msGroup("msTechOb","Tech OB",App.distinctValues.techOb,"techOb") +
+
+    '<div class="filter-group"><label>Terminal Count</label><div class="range-row"><input type="number" id="fTermMin" placeholder="Min"><input type="number" id="fTermMax" placeholder="Max"></div></div>'+
+    '<div class="filter-group"><label>Adit Pay Volume ($)</label><div class="range-row"><input type="number" id="fVolMin" placeholder="Min"><input type="number" id="fVolMax" placeholder="Max"></div></div>';
+
+  document.getElementById("fAdopted").addEventListener("change", function(e){ App.filters.adoptionStatus.Adopted = e.target.checked; refresh(); });
+  document.getElementById("fActive").addEventListener("change", function(e){ App.filters.adoptionStatus.Active = e.target.checked; refresh(); });
+  document.getElementById("fDateField").addEventListener("change", function(e){ App.filters.dateField = e.target.value; refresh(); });
+  document.getElementById("fDateFrom").addEventListener("change", function(e){ App.filters.dateFrom = e.target.value||null; App.filters.datePreset=null; setActivePreset(null); refresh(); });
+  document.getElementById("fDateTo").addEventListener("change", function(e){ App.filters.dateTo = e.target.value||null; App.filters.datePreset=null; setActivePreset(null); refresh(); });
+  document.getElementById("datePresets").addEventListener("click", function(e){
+    var btn = e.target.closest("button[data-preset]"); if(!btn) return;
+    applyDatePreset(btn.getAttribute("data-preset"));
+  });
+  document.getElementById("fTermMin").addEventListener("input", debounce(function(e){ App.filters.terminalMin = e.target.value===""?null:Number(e.target.value); refresh(); }));
+  document.getElementById("fTermMax").addEventListener("input", debounce(function(e){ App.filters.terminalMax = e.target.value===""?null:Number(e.target.value); refresh(); }));
+  document.getElementById("fVolMin").addEventListener("input", debounce(function(e){ App.filters.volMin = e.target.value===""?null:Number(e.target.value); refresh(); }));
+  document.getElementById("fVolMax").addEventListener("input", debounce(function(e){ App.filters.volMax = e.target.value===""?null:Number(e.target.value); refresh(); }));
+
+  ["stage","payStatus","package","csm","csmPod","techOb"].forEach(function(key){
+    grid.querySelectorAll('input[data-ms="'+key+'"]').forEach(function(cb){
+      cb.addEventListener("change", function(){
+        if (cb.checked) App.filters[key][cb.value]=true; else delete App.filters[key][cb.value];
+        updateMsSummary(key); refresh();
+      });
+    });
+    var s = grid.querySelector('input[data-mssearch="'+key+'"]');
+    if (s) s.addEventListener("input", function(){
+      var q = s.value.trim().toLowerCase();
+      grid.querySelectorAll('[data-msopts="'+key+'"] label').forEach(function(lb){
+        lb.style.display = lb.textContent.toLowerCase().indexOf(q)!==-1 ? "" : "none";
+      });
+    });
+  });
+
+  document.getElementById("btnToggleFilters").addEventListener("click", function(){
+    var p = document.getElementById("filtersPanel"); p.hidden = !p.hidden;
+  });
+  document.getElementById("btnResetFilters").addEventListener("click", resetFilters);
+}
+
+function updateMsSummary(key){
+  var chosen = Object.keys(App.filters[key]);
+  var idMap = {stage:"msStage",payStatus:"msPayStatus",package:"msPackage",csm:"msCsm",csmPod:"msCsmPod",techOb:"msTechOb"};
+  var sumEl = document.getElementById(idMap[key]+"Sum");
+  if (sumEl) sumEl.textContent = chosen.length ? chosen.length+" selected" : "All";
+}
+
+function setActivePreset(name){
+  document.querySelectorAll("#datePresets button").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-preset")===name); });
+}
+function toISODate(d){ return d.toISOString().slice(0,10); }
+function applyDatePreset(preset){
+  App.filters.datePreset = preset;
+  setActivePreset(preset);
+  var now = new Date(); var from=null, to=null;
+  if (preset==="All"){ from=null; to=null; }
+  else if (preset==="This Month"){ from=new Date(now.getFullYear(),now.getMonth(),1); to=now; }
+  else if (preset==="Last Month"){ from=new Date(now.getFullYear(),now.getMonth()-1,1); to=new Date(now.getFullYear(),now.getMonth(),0); }
+  else if (preset==="Last 30 Days"){ to=now; from=new Date(now.getTime()-29*86400000); }
+  else if (preset==="Last 90 Days"){ to=now; from=new Date(now.getTime()-89*86400000); }
+  else if (preset==="YTD"){ from=new Date(now.getFullYear(),0,1); to=now; }
+  App.filters.dateFrom = from ? toISODate(from) : null;
+  App.filters.dateTo = to ? toISODate(to) : null;
+  document.getElementById("fDateFrom").value = App.filters.dateFrom||"";
+  document.getElementById("fDateTo").value = App.filters.dateTo||"";
+  refresh();
+}
+
+function resetFilters(){
+  App.filters.adoptionStatus = {Adopted:true, Active:true};
+  App.filters.dateField = "agreementSignedDate";
+  App.filters.dateFrom = null; App.filters.dateTo = null; App.filters.datePreset=null;
+  ["stage","payStatus","package","csm","csmPod","techOb"].forEach(function(k){ App.filters[k]={}; });
+  App.filters.terminalMin=null; App.filters.terminalMax=null; App.filters.volMin=null; App.filters.volMax=null;
+  App.explorer.tierFilter = null;
+  buildFilterUI();
+  document.getElementById("filtersPanel").hidden = false;
+  refresh();
+}
+
+function debounce(fn,ms){ var t; return function(){ var a=arguments,ctx=this; clearTimeout(t); t=setTimeout(function(){fn.apply(ctx,a);}, ms||250); }; }
+
+function matchesFilters(r){
+  var status = r.aditPayVolume >= ADOPT_THRESHOLD ? "Adopted" : "Active";
+  if (!App.filters.adoptionStatus[status]) return false;
+
+  var dateVal = r[App.filters.dateField];
+  if (App.filters.dateFrom){ if (!dateVal || dateVal < new Date(App.filters.dateFrom)) return false; }
+  if (App.filters.dateTo){ if (!dateVal || dateVal > new Date(App.filters.dateTo+"T23:59:59")) return false; }
+
+  function msOk(key){
+    var chosen = Object.keys(App.filters[key]);
+    if (!chosen.length) return true;
+    var v = r[key]; return v!=null && chosen.indexOf(String(v).trim())!==-1;
+  }
+  if (!msOk("stage")||!msOk("payStatus")||!msOk("package")||!msOk("csm")||!msOk("csmPod")||!msOk("techOb")) return false;
+
+  if (App.filters.terminalMin!=null && (r.terminalCount==null || Number(r.terminalCount) < App.filters.terminalMin)) return false;
+  if (App.filters.terminalMax!=null && (r.terminalCount==null || Number(r.terminalCount) > App.filters.terminalMax)) return false;
+  if (App.filters.volMin!=null && r.aditPayVolume < App.filters.volMin) return false;
+  if (App.filters.volMax!=null && r.aditPayVolume > App.filters.volMax) return false;
+
+  return true;
+}
+
+function getFilteredRows(){ return App.processed.filter(matchesFilters); }
+function countActiveFilters(){
+  var n=0; var f=App.filters;
+  if (!f.adoptionStatus.Adopted || !f.adoptionStatus.Active) n++;
+  if (f.dateFrom||f.dateTo) n++;
+  ["stage","payStatus","package","csm","csmPod","techOb"].forEach(function(k){ if (Object.keys(f[k]).length) n++; });
+  if (f.terminalMin!=null||f.terminalMax!=null) n++;
+  if (f.volMin!=null||f.volMax!=null) n++;
+  return n;
+}
+
+/* ============================== aggregation ============================== */
+
+function aggregate(rows){
+  var adopted = rows.filter(function(r){ return r.aditPayVolume >= ADOPT_THRESHOLD; });
+  var active = rows.filter(function(r){ return r.aditPayVolume < ADOPT_THRESHOLD; });
+  var totalAdoptedVolume = sumBy(adopted,"aditPayVolume");
+  var totalActiveVolume = sumBy(active,"aditPayVolume");
+
+  function tierize(list, tiers, totalForPct){
+    var cum = 0;
+    return tiers.map(function(t){
+      var members = list.filter(function(r){ return findTier(r.aditPayVolume, tiers)===t; });
+      cum += members.length;
+      return {
+        label:t.label, tierRef:t, count:members.length,
+        pct: totalForPct? members.length/totalForPct : 0,
+        cumulative: cum, volume: sumBy(members,"aditPayVolume"), members: members
+      };
+    });
+  }
+
+  var adoptedTiers = tierize(adopted, ADOPTED_TIERS, adopted.length);
+  var activeTiers = tierize(active, ACTIVE_TIERS, active.length);
+  var granularTiers = tierize(adopted, GRANULAR_TIERS, adopted.length);
+
+  var total = rows.length;
+  var target = function(p){ return Math.ceil(total*p); };
+  var need = function(p){ return Math.max(0, target(p) - adopted.length); };
+
+  var potentialVolumeOpportunity = sumBy(active, function(r){ return ADOPT_THRESHOLD - r.aditPayVolume; });
+
+  var near = active.filter(function(r){ return r.aditPayVolume > 4000; }).length;
+  var mid = active.filter(function(r){ return r.aditPayVolume > 2500 && r.aditPayVolume <= 4000; }).length;
+  var low = active.filter(function(r){ return r.aditPayVolume <= 2500; }).length;
+
+  var activeBuckets = {
+    at0: active.filter(function(r){return r.aditPayVolume===0;}).length,
+    to500: active.filter(function(r){return r.aditPayVolume>0 && r.aditPayVolume<=500;}).length,
+    to1000: active.filter(function(r){return r.aditPayVolume>500 && r.aditPayVolume<=1000;}).length,
+    to2500: active.filter(function(r){return r.aditPayVolume>1000 && r.aditPayVolume<=2500;}).length,
+    to5000: active.filter(function(r){return r.aditPayVolume>2500 && r.aditPayVolume<5000;}).length
+  };
+
+  return {
+    total: total, adopted: adopted, active: active,
+    adoptedCount: adopted.length, activeCount: active.length,
+    adoptionRate: total? adopted.length/total : 0,
+    totalAdoptedVolume: totalAdoptedVolume, totalActiveVolume: totalActiveVolume,
+    totalVolume: totalAdoptedVolume+totalActiveVolume,
+    avgAdopted: adopted.length? totalAdoptedVolume/adopted.length : 0,
+    pctBelowThreshold: total? active.length/total : 0,
+    adoptedTiers: adoptedTiers, activeTiers: activeTiers, granularTiers: granularTiers,
+    opportunity: {
+      need50: need(0.5), need60: need(0.6), need70: need(0.7),
+      target50: target(0.5), target60: target(0.6), target70: target(0.7),
+      potentialVolumeOpportunity: potentialVolumeOpportunity
+    },
+    activeAnalysis: {
+      count: active.length, volume: totalActiveVolume,
+      pctOfDeals: total? active.length/total : 0,
+      pctOfVolume: (totalAdoptedVolume+totalActiveVolume)? totalActiveVolume/(totalAdoptedVolume+totalActiveVolume) : 0,
+      buckets: activeBuckets, near:near, mid:mid, low:low
+    },
+    reconciliation: buildReconciliation(adopted, active, total, adoptedTiers, activeTiers, granularTiers, totalAdoptedVolume, totalActiveVolume)
+  };
+}
+function sumBy(arr,keyOrFn){ var fn = typeof keyOrFn==="function"?keyOrFn:function(r){return r[keyOrFn];}; return arr.reduce(function(a,r){return a+(fn(r)||0);},0); }
+
+function buildReconciliation(adopted,active,total,adoptedTiers,activeTiers,granularTiers,totalAdoptedVolume,totalActiveVolume){
+  var checks = [];
+  checks.push({name:"Adopted + Active = Total Terminal Deals", pass: (adopted.length+active.length)===total});
+  checks.push({name:"Sum of Adopted tier counts = Total Adopted Deals", pass: sumBy(adoptedTiers,"count")===adopted.length});
+  checks.push({name:"Sum of Active tier counts = Total Active Deals", pass: sumBy(activeTiers,"count")===active.length});
+  checks.push({name:"Sum of Adopted tier volume = Total Adopted Volume", pass: centsEq(sumBy(adoptedTiers,"volume"), totalAdoptedVolume)});
+  checks.push({name:"Sum of Active tier volume = Total Active Volume", pass: centsEq(sumBy(activeTiers,"volume"), totalActiveVolume)});
+  checks.push({name:"Granular adopted tier counts = Total Adopted Deals", pass: sumBy(granularTiers,"count")===adopted.length});
+  return checks;
+}
+function centsEq(a,b){ return Math.round(a*100)===Math.round(b*100); }
+
+/* ============================== render: orchestration ============================== */
+
+var lastAgg = null;
+
+function refresh(){ renderAll(); }
+
+function renderAll(){
+  var rows = getFilteredRows();
+  var agg = aggregate(rows);
+  lastAgg = agg;
+  renderReconciliation(agg);
+  renderKpis(agg);
+  renderNarrative(agg);
+  renderCharts(agg);
+  renderAdoptedSection(agg);
+  renderActiveSection(agg);
+  renderGranularSection(agg);
+  renderActiveAnalysis(agg);
+  renderOpportunity(agg);
+  renderExplorer();
+  renderValidationDetail();
+  var dot = document.getElementById("filterActiveDot"); dot.hidden = countActiveFilters()===0;
+  document.getElementById("filterCount").textContent = rows.length.toLocaleString()+" of "+App.processed.length.toLocaleString()+" deals match current filters";
+}
+
+function renderReconciliation(agg){
+  var el = document.getElementById("reconciliationBanner");
+  var failed = agg.reconciliation.filter(function(c){return !c.pass;});
+  if (!failed.length){
+    el.innerHTML = '<div class="recon-banner recon-ok">&#10003; All reconciliation checks passed &mdash; tier totals match the executive summary.</div>';
+  } else {
+    el.innerHTML = '<div class="recon-banner recon-bad">&#9888; Reconciliation issue detected: '+failed.map(function(f){return esc(f.name);}).join("; ")+'</div>';
+  }
+}
+
+function kpiCard(label,val,sub,cls){ return '<div class="kpi-card '+(cls||"")+'"><div class="kpi-label">'+esc(label)+'</div><div class="kpi-val">'+val+'</div>'+(sub?'<div class="kpi-sub">'+sub+'</div>':'')+'</div>'; }
+
+function renderKpis(agg){
+  var el = document.getElementById("kpiGrid");
+  el.innerHTML =
+    kpiCard("Total Terminal Deals", fmtInt(agg.total), "In current filter", "") +
+    kpiCard("Adopted Deals", fmtInt(agg.adoptedCount), fmtPct(agg.adoptionRate)+" adoption rate", "accent") +
+    kpiCard("Active Deals", fmtInt(agg.activeCount), fmtPct(agg.pctBelowThreshold)+" below $5,000 threshold", "amber") +
+    kpiCard("Adoption Rate", fmtPct(agg.adoptionRate), "Adopted ÷ total deals", "accent") +
+    kpiCard("Total Adopted Volume", fmtMoney0(agg.totalAdoptedVolume), "Sum of adopted Adit Pay Volume", "accent") +
+    kpiCard("Active Volume", fmtMoney0(agg.totalActiveVolume), "Sum of active Adit Pay Volume", "amber") +
+    kpiCard("Total Adit Pay Volume", fmtMoney0(agg.totalVolume), "Across all qualifying deals", "") +
+    kpiCard("Avg. Volume per Adopted Deal", fmtMoney0(agg.avgAdopted), "Total adopted volume ÷ adopted deals", "");
+}
+
+function renderNarrative(agg){
+  var el = document.getElementById("narrativeStrip");
+  if (!agg.total){ el.textContent = "No deals match the current filters."; return; }
+  var near = agg.activeAnalysis.near;
+  el.innerHTML =
+    "<strong>"+fmtPct(agg.adoptionRate,1)+"</strong> of "+fmtInt(agg.total)+" terminal deals have adopted Adit Pay, processing <strong>"+fmtMoney0(agg.totalAdoptedVolume)+"</strong> in volume. "+
+    "<span class=\"n-amber\">"+fmtInt(agg.activeCount)+" deals</span> remain active below the $5,000 threshold"+
+    (near ? ", including "+near+" within $1,000 of adopting" : "")+".";
+}
+
+/* ============================== charts ============================== */
+
+function destroyCharts(){ Object.keys(App.charts).forEach(function(k){ if(App.charts[k]) App.charts[k].destroy(); }); App.charts={}; }
+
+function themeColor(varName){ return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
+
+function renderCharts(agg){
+  if (typeof Chart === "undefined") return;
+  destroyCharts();
+  var ink = themeColor("--ink"), grid = CHART_COLORS.grid;
+  Chart.defaults.color = ink; Chart.defaults.font.family = "IBM Plex Sans, sans-serif"; Chart.defaults.font.size=11;
+
+  mkBar("chartAdoptedTier", agg.adoptedTiers.map(function(t){return t.label;}), agg.adoptedTiers.map(function(t){return t.count;}), CHART_COLORS.adopted, "adopted", "count");
+  mkBar("chartActiveTier", agg.activeTiers.map(function(t){return t.label;}), agg.activeTiers.map(function(t){return t.count;}), CHART_COLORS.active, "active", "count");
+  mkBar("chartAdoptedVolume", agg.adoptedTiers.map(function(t){return t.label;}), agg.adoptedTiers.map(function(t){return t.volume;}), CHART_COLORS.adopted, "adoptedVol", "money");
+
+  var fCtx = document.getElementById("chartFunnel");
+  App.charts.funnel = new Chart(fCtx, {
+    type:"bar",
+    data:{ labels:["Total Terminal Deals","Active Deals","Adopted Deals"],
+      datasets:[{ data:[agg.total, agg.activeCount, agg.adoptedCount],
+        backgroundColor:[CHART_COLORS.grid.replace(".18",".5"), CHART_COLORS.activeSoft, CHART_COLORS.adoptedSoft],
+        borderColor:["#9a988f", CHART_COLORS.active, CHART_COLORS.adopted], borderWidth:1.5, borderRadius:5 }]},
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{grid:{color:grid}, ticks:{precision:0}}, y:{grid:{display:false}} } }
+  });
+
+  var rCtx = document.getElementById("chartRate");
+  App.charts.rate = new Chart(rCtx, {
+    type:"doughnut",
+    data:{ labels:["Adopted","Remaining"], datasets:[{ data:[agg.adoptedCount, Math.max(0,agg.total-agg.adoptedCount)],
+      backgroundColor:[CHART_COLORS.adopted, grid.replace(".18",".35")], borderWidth:0 }]},
+    options:{ responsive:true, maintainAspectRatio:false, cutout:"72%", plugins:{legend:{position:"bottom", labels:{boxWidth:10,padding:12}}} },
+    plugins:[{
+      id:"centerRate",
+      afterDraw:function(chart){
+        var ctx = chart.ctx; var w=chart.width, h=chart.height;
+        ctx.save(); ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.font="600 20px IBM Plex Mono, monospace"; ctx.fillStyle=ink;
+        ctx.fillText(fmtPct(agg.adoptionRate), w/2, h/2-6);
+        ctx.font="500 10px IBM Plex Sans, sans-serif"; ctx.fillStyle=themeColor("--ink-soft");
+        ctx.fillText("adopted", w/2, h/2+14);
+        ctx.restore();
+      }
+    }]
+  });
+
+  function mkBar(canvasId, labels, data, color, key, fmt){
+    var ctx = document.getElementById(canvasId);
+    App.charts[key] = new Chart(ctx, {
+      type:"bar",
+      data:{ labels:labels, datasets:[{ data:data, backgroundColor: hexToRgba(color,.6), borderColor:color, borderWidth:1.5, borderRadius:4, maxBarThickness:34 }]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){ return fmt==="money"? fmtMoney0(c.parsed.y||c.parsed.x) : fmtInt(c.parsed.y||c.parsed.x); } } } },
+        scales:{ x:{ grid:{display:false}, ticks:{maxRotation:60, minRotation:60, autoSkip:false, font:{size:9.5}} },
+                 y:{ grid:{color:grid}, ticks:{ callback:function(v){ return fmt==="money"? "$"+abbrev(v) : v; } } } },
+        onClick:function(evt, els){ if(!els.length) return; var i=els[0].index; var tierArr = key==="active"?agg.activeTiers:agg.adoptedTiers; openDrilldown(tierArr[i]); }
+      }
+    });
+  }
+}
+function abbrev(n){ if (Math.abs(n)>=1e6) return (n/1e6).toFixed(1)+"M"; if (Math.abs(n)>=1e3) return (n/1e3).toFixed(0)+"K"; return String(n); }
+function hexToRgba(hex,a){ var m = hex.replace("#",""); var r=parseInt(m.substr(0,2),16),g=parseInt(m.substr(2,2),16),b=parseInt(m.substr(4,2),16); return "rgba("+r+","+g+","+b+","+a+")"; }
+
+/* ============================== tier table sections ============================== */
+
+function tierTableHTML(title, subtitle, tiers, totalCount, totalVolume, opts){
+  opts = opts||{};
+  var rows = tiers.map(function(t,i){
+    return "<tr>"+
+      '<td class="clickable" data-tier-idx="'+i+'" data-tier-kind="'+opts.kind+'">'+esc(t.label)+"</td>"+
+      "<td>"+fmtInt(t.count)+"</td>"+
+      "<td>"+fmtPct(t.pct)+"</td>"+
+      (opts.showCumulative ? "<td>"+fmtInt(t.cumulative)+"</td>" : "")+
+      "<td>"+fmtMoney0(t.volume)+"</td>"+
+      "</tr>";
+  }).join("");
+  return '<p class="section-eyebrow">Executive summary</p>'+
+    "<h2>"+esc(title)+"</h2>"+
+    '<p class="panel-sub">'+subtitle+"</p>"+
+    '<div class="table-scroll"><table class="tier-table"><thead><tr>'+
+    "<th>Volume Range</th><th>Deal Count</th><th>% of "+esc(opts.pctLabel)+"</th>"+
+    (opts.showCumulative? "<th>Cumulative Count</th>":"")+
+    "<th>Total Tier Volume</th></tr></thead><tbody>"+rows+"</tbody>"+
+    "<tfoot><tr><td>Total</td><td>"+fmtInt(totalCount)+"</td><td>100%</td>"+
+    (opts.showCumulative? "<td>"+fmtInt(totalCount)+"</td>":"")+
+    "<td>"+fmtMoney0(totalVolume)+"</td></tr></tfoot></table></div>"+
+    '<p style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;">Click any volume range to view the underlying deals.</p>';
+}
+
+function renderAdoptedSection(agg){
+  var el = document.getElementById("adoptedSummarySection");
+  el.innerHTML = tierTableHTML("1. Adopted Deals Summary", "Adopted Deals &nbsp;|&nbsp; ≥ $5,000 Volume", agg.adoptedTiers, agg.adoptedCount, agg.totalAdoptedVolume, {kind:"adopted", pctLabel:"Adopted", showCumulative:true});
+  el.querySelectorAll("td.clickable").forEach(function(td){
+    td.addEventListener("click", function(){ openDrilldown(agg.adoptedTiers[Number(td.getAttribute("data-tier-idx"))]); });
+  });
+}
+function renderActiveSection(agg){
+  var el = document.getElementById("activeSummarySection");
+  el.innerHTML = tierTableHTML("2. Active Deals Summary", "Active Deals &nbsp;|&nbsp; &lt; $5,000 Volume", agg.activeTiers, agg.activeCount, agg.totalActiveVolume, {kind:"active", pctLabel:"Active", showCumulative:true});
+  el.querySelectorAll("td.clickable").forEach(function(td){
+    td.addEventListener("click", function(){ openDrilldown(agg.activeTiers[Number(td.getAttribute("data-tier-idx"))]); });
+  });
+}
+function renderGranularSection(agg){
+  var el = document.getElementById("granularSection");
+  el.innerHTML = tierTableHTML("3. Adopted Deals — Granular $2,500 Steps", "Detailed visibility into adoption between $5,000 and $30,000", agg.granularTiers, agg.adoptedCount, agg.totalAdoptedVolume, {kind:"granular", pctLabel:"Adopted", showCumulative:false});
+  el.querySelectorAll("td.clickable").forEach(function(td){
+    td.addEventListener("click", function(){ openDrilldown(agg.granularTiers[Number(td.getAttribute("data-tier-idx"))]); });
+  });
+}
+
+function renderActiveAnalysis(agg){
+  var a = agg.activeAnalysis;
+  var el = document.getElementById("activeAnalysisSection");
+  el.innerHTML =
+    '<p class="section-eyebrow">Active deal analysis</p><h2>Where the remaining opportunity sits</h2>'+
+    '<div class="stat-grid" style="margin-top:14px;">'+
+    statTile(fmtInt(a.count),"Active deal count")+
+    statTile(fmtMoney0(a.volume),"Active volume")+
+    statTile(fmtPct(a.pctOfDeals),"% of total terminal deals")+
+    statTile(fmtPct(a.pctOfVolume),"% of total terminal volume")+
+    statTile(fmtInt(a.buckets.at0),"Deals at $0")+
+    statTile(fmtInt(a.buckets.to500),"$0.01 – $500")+
+    statTile(fmtInt(a.buckets.to1000),"$500 – $1,000")+
+    statTile(fmtInt(a.buckets.to2500),"$1,000 – $2,500")+
+    statTile(fmtInt(a.buckets.to5000),"$2,500 – $5,000")+
+    "</div>"+
+    '<div class="opp-row">'+
+    oppCard(fmtInt(a.near),"Near Adoption ($4,000.01–$5,000)")+
+    oppCard(fmtInt(a.mid),"Mid Adoption ($2,500.01–$4,000)")+
+    oppCard(fmtInt(a.low),"Low / No Usage ($0–$2,500)")+
+    "</div>";
+}
+function statTile(val,label){ return '<div class="stat-tile"><div class="st-val">'+val+'</div><div class="st-lbl">'+esc(label)+'</div></div>'; }
+function oppCard(val,label){ return '<div class="opp-card"><div class="opp-num">'+val+'</div><div class="opp-lbl">'+esc(label)+'</div></div>'; }
+
+function renderOpportunity(agg){
+  var o = agg.opportunity;
+  var el = document.getElementById("opportunitySection");
+  el.innerHTML =
+    '<p class="section-eyebrow">Adoption opportunity</p><h2>Path to higher adoption</h2>'+
+    '<div class="opp-row">'+
+    oppCard(fmtInt(o.need50),"Deals needed for 50% adoption")+
+    oppCard(fmtInt(o.need60),"Deals needed for 60% adoption")+
+    oppCard(fmtInt(o.need70),"Deals needed for 70% adoption")+
+    "</div>"+
+    '<div class="stat-grid" style="margin-top:14px;">'+
+    statTile(fmtMoney0(o.potentialVolumeOpportunity),"Potential volume opportunity")+
+    statTile(fmtInt(o.target50),"Target adopted deals @ 50%")+
+    statTile(fmtInt(o.target60),"Target adopted deals @ 60%")+
+    statTile(fmtInt(o.target70),"Target adopted deals @ 70%")+
+    "</div>"+
+    '<p style="font-size:12px;color:var(--ink-soft);margin-top:12px;">Potential volume opportunity is the additional Adit Pay Volume every active deal would need to process to individually cross the $5,000 adoption threshold.</p>';
+}
+
+/* ============================== drilldown ============================== */
+
+function openDrilldown(tier){
+  var modal = document.getElementById("drilldownModal");
+  document.getElementById("drilldownTitle").textContent = tier.label + " — " + tier.count + " deal" + (tier.count===1?"":"s");
+  document.getElementById("drilldownBody").innerHTML = dealTableHTML(tier.members);
+  modal.hidden = false;
+}
+document.getElementById("drilldownClose").addEventListener("click", function(){ document.getElementById("drilldownModal").hidden = true; });
+document.getElementById("drilldownModal").addEventListener("click", function(e){ if (e.target.id==="drilldownModal") e.currentTarget.hidden = true; });
+
+function dealTableHTML(rows){
+  if (!rows.length) return '<p class="empty-note">No deals in this range.</p>';
+  var head = ["Deal Name","Record Number","Terminal Count","Package","Stage","Pay Status","Pay Score","Adit Pay Volume","Pay Adopt Date","CSM","CSM Pod","Tech OB"];
+  var body = rows.map(function(r){
+    return "<tr>"+
+      "<td>"+esc(r.dealName)+"</td>"+"<td>"+esc(r.recordNumber)+"</td>"+"<td>"+esc(r.terminalCount)+"</td>"+
+      "<td>"+esc(r.package)+"</td>"+"<td>"+esc(r.stage)+"</td>"+"<td>"+esc(r.payStatus)+"</td>"+"<td>"+esc(r.payScore)+"</td>"+
+      "<td>"+fmtMoney(r.aditPayVolume)+"</td>"+"<td>"+(r.payAdoptDate?r.payAdoptDate.toLocaleDateString():"")+"</td>"+
+      "<td>"+esc(r.csm)+"</td>"+"<td>"+esc(r.csmPod)+"</td>"+"<td>"+esc(r.techOb)+"</td>"+
+      "</tr>";
+  }).join("");
+  return '<div class="table-scroll"><table><thead><tr>'+head.map(function(h){return "<th>"+h+"</th>";}).join("")+
+    "</tr></thead><tbody>"+body+"</tbody></table></div>";
+}
+
+/* ============================== explorer ============================== */
+
+var explorerSearchEl = document.getElementById("explorerSearch");
+explorerSearchEl.addEventListener("input", debounce(function(){ App.explorer.search = explorerSearchEl.value.trim().toLowerCase(); App.explorer.page=1; renderExplorer(); },200));
+document.getElementById("explorerClearTier").addEventListener("click", function(){ App.explorer.tierFilter=null; document.getElementById("explorerClearTier").hidden=true; renderExplorer(); });
+
+var EXPLORER_COLS = [
+  {key:"dealName", label:"Deal Name"}, {key:"recordNumber", label:"Record #"}, {key:"terminalCount", label:"Terminals"},
+  {key:"package", label:"Package"}, {key:"stage", label:"Stage"}, {key:"payStatus", label:"Pay Status"},
+  {key:"payScore", label:"Pay Score"}, {key:"aditPayVolume", label:"Adit Pay Volume", money:true},
+  {key:"payAdoptDate", label:"Pay Adopt Date", date:true}, {key:"csm", label:"CSM"}, {key:"csmPod", label:"CSM Pod"}, {key:"techOb", label:"Tech OB"}
+];
+
+function renderExplorer(){
+  var head = document.querySelector("#explorerTable thead tr");
+  head.innerHTML = EXPLORER_COLS.map(function(c){
+    var active = App.explorer.sortKey===c.key;
+    var arrow = active ? (App.explorer.sortDir==="asc"?"↑":"↓") : "↕";
+    return '<th class="sortable'+(active?" active":"")+'" data-key="'+c.key+'">'+esc(c.label)+' <span class="arrow">'+arrow+'</span></th>';
+  }).join("");
+  head.querySelectorAll("th").forEach(function(th){
+    th.addEventListener("click", function(){
+      var key = th.getAttribute("data-key");
+      if (App.explorer.sortKey===key) App.explorer.sortDir = App.explorer.sortDir==="asc"?"desc":"asc";
+      else { App.explorer.sortKey=key; App.explorer.sortDir="asc"; }
+      renderExplorer();
+    });
+  });
+
+  var rows = getFilteredRows();
+  if (App.explorer.tierFilter) rows = rows.filter(function(r){ return App.explorer.tierFilter.indexOf(r)!==-1; });
+  var q = App.explorer.search;
+  if (q){
+    rows = rows.filter(function(r){
+      return [r.dealName,r.recordNumber,r.csm,r.csmPod,r.techOb].some(function(v){ return v!=null && String(v).toLowerCase().indexOf(q)!==-1; });
+    });
+  }
+  var key = App.explorer.sortKey, dir = App.explorer.sortDir===("asc")?1:-1;
+  rows = rows.slice().sort(function(a,b){
+    var av=a[key], bv=b[key];
+    if (av instanceof Date || bv instanceof Date){ av=av?av.getTime():-Infinity; bv=bv?bv.getTime():-Infinity; }
+    if (typeof av==="string" || typeof bv==="string"){ av=(av==null?"":String(av)).toLowerCase(); bv=(bv==null?"":String(bv)).toLowerCase(); }
+    else { av = av==null? -Infinity: av; bv = bv==null? -Infinity: bv; }
+    if (av<bv) return -1*dir; if (av>bv) return 1*dir; return 0;
+  });
+
+  document.getElementById("explorerCount").textContent = rows.length.toLocaleString()+" deals";
+
+  var pageSize = App.explorer.pageSize;
+  var pageCount = Math.max(1, Math.ceil(rows.length/pageSize));
+  if (App.explorer.page>pageCount) App.explorer.page=pageCount;
+  var start = (App.explorer.page-1)*pageSize;
+  var pageRows = rows.slice(start, start+pageSize);
+
+  var tbody = document.querySelector("#explorerTable tbody");
+  if (!pageRows.length){ tbody.innerHTML = '<tr><td colspan="'+EXPLORER_COLS.length+'" class="empty-note">No deals match the current filters.</td></tr>'; }
+  else {
+    tbody.innerHTML = pageRows.map(function(r){
+      return "<tr>"+EXPLORER_COLS.map(function(c){
+        var v = r[c.key];
+        if (c.money) return "<td>"+fmtMoney(v)+"</td>";
+        if (c.date) return "<td>"+(v?v.toLocaleDateString():"")+"</td>";
+        return "<td>"+esc(v)+"</td>";
+      }).join("")+"</tr>";
+    }).join("");
+  }
+
+  var pager = document.getElementById("explorerPager");
+  pager.innerHTML = 'Page '+App.explorer.page+" of "+pageCount+
+    ' &nbsp; <button class="btn btn-sm" id="pgPrev" '+(App.explorer.page<=1?"disabled":"")+'>Prev</button>'+
+    ' <button class="btn btn-sm" id="pgNext" '+(App.explorer.page>=pageCount?"disabled":"")+'>Next</button>';
+  var prevBtn = document.getElementById("pgPrev"), nextBtn = document.getElementById("pgNext");
+  if (prevBtn) prevBtn.addEventListener("click", function(){ App.explorer.page--; renderExplorer(); });
+  if (nextBtn) nextBtn.addEventListener("click", function(){ App.explorer.page++; renderExplorer(); });
+
+  document.getElementById("explorerClearTier").hidden = !App.explorer.tierFilter;
+}
+
+function jumpExplorerToTier(tier){
+  App.explorer.tierFilter = tier.members;
+  App.explorer.page = 1;
+  document.getElementById("drilldownModal").hidden = true;
+  renderExplorer();
+  document.getElementById("explorerSection").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+/* ============================== validation detail ============================== */
+
+function renderValidationDetail(){
+  var el = document.getElementById("validationDetailSection");
+  var v = App.validation;
+  var rows = v.issues.map(function(is){
+    return "<tr><td>"+is.rowNum+"</td><td>"+esc(is.detail)+"</td>"+
+      '<td><span class="badge '+(is.severity==="excluded"?"badge-bad":"badge-warn")+'">'+(is.severity==="excluded"?"Excluded":"Warning")+"</span></td>"+
+      "<td>"+esc(is.reason)+"</td></tr>";
+  }).join("");
+  el.innerHTML =
+    '<p class="section-eyebrow">Data quality</p><h2>Validation detail</h2>'+
+    '<div class="val-grid" style="margin-top:14px;">'+
+    valTile(fmtInt(v.totalRows),"Total rows uploaded","")+
+    valTile(fmtInt(v.validRecords),"Valid records","")+
+    valTile(fmtInt(v.warnRecords),"Records with warnings", v.warnRecords?"warn":"")+
+    valTile(fmtInt(v.excludedRecords),"Records excluded", v.excludedRecords?"bad":"")+
+    "</div>"+
+    (rows ? '<div class="issues-table-wrap" style="margin-top:14px;max-height:320px;"><table><thead><tr><th>Row</th><th>Deal</th><th>Type</th><th>Reason</th></tr></thead><tbody>'+rows+"</tbody></table></div>"
+      : '<p style="font-size:13px;color:var(--ink-soft);margin-top:10px;">No data quality issues found.</p>');
+}
+
+/* ============================== export ============================== */
+
+document.getElementById("btnExportToggle").addEventListener("click", function(){
+  document.getElementById("exportPanel").hidden = !document.getElementById("exportPanel").hidden;
+});
+document.addEventListener("click", function(e){
+  if (!e.target.closest(".export-menu")) document.getElementById("exportPanel").hidden = true;
+});
+document.getElementById("exportPanel").addEventListener("click", function(e){
+  var btn = e.target.closest("button[data-export]"); if (!btn) return;
+  document.getElementById("exportPanel").hidden = true;
+  var kind = btn.getAttribute("data-export");
+  if (kind==="xlsx") exportExcel();
+  else if (kind==="csv") exportCsv();
+  else if (kind==="pdf") exportPdf();
+});
+
+function tierSheetAoA(title, subtitle, tiers, totalCount, totalVolume, showCum, pctLabel){
+  var aoa = [[title],[subtitle],[]];
+  var head = ["Volume Range","Deal Count","% of "+pctLabel];
+  if (showCum) head.push("Cumulative Count");
+  head.push("Total Tier Volume ($)");
+  aoa.push(head);
+  tiers.forEach(function(t){
+    var row = [t.label, t.count, Number((t.pct*100).toFixed(2))+"%"];
+    if (showCum) row.push(t.cumulative);
+    row.push(Number(t.volume.toFixed(2)));
+    aoa.push(row);
+  });
+  var totalRow = ["Total", totalCount, "100%"];
+  if (showCum) totalRow.push(totalCount);
+  totalRow.push(Number(totalVolume.toFixed(2)));
+  aoa.push(totalRow);
+  return aoa;
+}
+
+async function offerDownload(filename, blobOrData){
+  try{
+    if (!App.downloadsNs) App.downloadsNs = await (window.claude ? window.claude.use("downloads") : Promise.resolve(null));
+  } catch(e){ App.downloadsNs = null; }
+  if (App.downloadsNs){
+    try{
+      await App.downloadsNs.save({filename:filename, data:blobOrData});
+      return true;
+    } catch(err){
+      if (err && err.code==="declined") return false;
+      alert("Couldn't save the file ("+(err&&err.message?err.message:"unknown error")+").");
+      return false;
+    }
+  }
+  // fallback for contexts without the capability (e.g. local preview)
+  try{
+    var url = URL.createObjectURL(blobOrData);
+    var a = document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+    return true;
+  } catch(e2){ alert("Download isn't available in this preview."); return false; }
+}
+
+function exportExcel(){
+  if (typeof XLSX === "undefined"){ alert("Excel export library did not load."); return; }
+  var agg = lastAgg || aggregate(getFilteredRows());
+  var wb = XLSX.utils.book_new();
+
+  var execAoA = [
+    ["Adit Pay Terminal Adoption Analyzer — Executive Summary"],
+    ["Generated "+new Date().toLocaleString()],
+    [],
+    ["KPI","Value"],
+    ["Total Terminal Deals", agg.total],
+    ["Adopted Deals", agg.adoptedCount],
+    ["Active Deals", agg.activeCount],
+    ["Adoption Rate", fmtPct(agg.adoptionRate,2)],
+    ["Total Adopted Volume", Number(agg.totalAdoptedVolume.toFixed(2))],
+    ["Active Volume", Number(agg.totalActiveVolume.toFixed(2))],
+    ["Total Adit Pay Volume", Number(agg.totalVolume.toFixed(2))],
+    ["Average Volume per Adopted Deal", Number(agg.avgAdopted.toFixed(2))],
+    ["% Below $5,000 Threshold", fmtPct(agg.pctBelowThreshold,2)],
+    [],
+    ["Reconciliation Checks"]
+  ];
+  agg.reconciliation.forEach(function(c){ execAoA.push([c.name, c.pass?"PASS":"FAIL"]); });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(execAoA), "Executive Summary");
+
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
+    tierSheetAoA("1. Adopted Deals Summary","Adopted Deals | >= $5,000 Volume", agg.adoptedTiers, agg.adoptedCount, agg.totalAdoptedVolume, true, "Adopted")
+  ), "Adopted Summary");
+
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
+    tierSheetAoA("2. Active Deals Summary","Active Deals | < $5,000 Volume", agg.activeTiers, agg.activeCount, agg.totalActiveVolume, true, "Active")
+  ), "Active Summary");
+
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
+    tierSheetAoA("3. Adopted Deals - Granular $2,500 Steps","", agg.granularTiers, agg.adoptedCount, agg.totalAdoptedVolume, false, "Adopted")
+  ), "Granular Adoption");
+
+  var dealHead = ["Deal Name","Record Number","Terminal Count","Package","Stage","Pay Status","Pay Score","Adit Pay Volume","Adoption Status","Volume Tier","Pay Adopt Date","Agreement Signed Date","CSM","CSM Pod","Tech OB","Potential Additional Volume"];
+  var dealRows = getFilteredRows().map(function(r){
+    var status = r.aditPayVolume>=ADOPT_THRESHOLD?"Adopted":"Active";
+    var tier = findTier(r.aditPayVolume, status==="Adopted"?ADOPTED_TIERS:ACTIVE_TIERS).label;
+    return [r.dealName, r.recordNumber, r.terminalCount, r.package, r.stage, r.payStatus, r.payScore,
+      Number(r.aditPayVolume.toFixed(2)), status, tier,
+      r.payAdoptDate?r.payAdoptDate.toLocaleDateString():"", r.agreementSignedDate?r.agreementSignedDate.toLocaleDateString():"",
+      r.csm, r.csmPod, r.techOb, status==="Active"? Number((ADOPT_THRESHOLD-r.aditPayVolume).toFixed(2)) : 0];
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([dealHead].concat(dealRows)), "Deal-Level Data");
+
+  var v = App.validation;
+  var qaAoA = [["Data Validation / Quality"],[],
+    ["Total rows uploaded", v.totalRows],["Valid records", v.validRecords],
+    ["Records with warnings", v.warnRecords],["Records excluded", v.excludedRecords],[],
+    ["Row","Deal","Type","Reason"]];
+  v.issues.forEach(function(is){ qaAoA.push([is.rowNum, is.detail, is.severity, is.reason]); });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(qaAoA), "Validation");
+
+  var wbout = XLSX.write(wb, {bookType:"xlsx", type:"array"});
+  var blob = new Blob([wbout], {type:"application/octet-stream"});
+  offerDownload("Adit_Pay_Adoption_Summary.xlsx", blob);
+}
+
+function exportCsv(){
+  var head = ["Deal Name","Record Number","Terminal Count","Package","Stage","Pay Status","Pay Score","Adit Pay Volume","Adoption Status","Volume Tier","Pay Adopt Date","Agreement Signed Date","CSM","CSM Pod","Tech OB","Potential Additional Volume"];
+  var lines = [head.join(",")];
+  getFilteredRows().forEach(function(r){
+    var status = r.aditPayVolume>=ADOPT_THRESHOLD?"Adopted":"Active";
+    var tier = findTier(r.aditPayVolume, status==="Adopted"?ADOPTED_TIERS:ACTIVE_TIERS).label;
+    var vals = [r.dealName, r.recordNumber, r.terminalCount, r.package, r.stage, r.payStatus, r.payScore,
+      r.aditPayVolume.toFixed(2), status, tier,
+      r.payAdoptDate?r.payAdoptDate.toLocaleDateString():"", r.agreementSignedDate?r.agreementSignedDate.toLocaleDateString():"",
+      r.csm, r.csmPod, r.techOb, status==="Active"? (ADOPT_THRESHOLD-r.aditPayVolume).toFixed(2) : "0"];
+    lines.push(vals.map(csvCell).join(","));
+  });
+  var blob = new Blob([lines.join("\r\n")], {type:"text/csv;charset=utf-8"});
+  offerDownload("Adit_Pay_Deal_Data.csv", blob);
+}
+function csvCell(v){ v = v==null?"":String(v); if (/[",\n]/.test(v)) v = '"'+v.replace(/"/g,'""')+'"'; return v; }
+
+function exportPdf(){
+  if (typeof window.jspdf === "undefined"){ alert("PDF export library did not load."); return; }
+  var agg = lastAgg || aggregate(getFilteredRows());
+  var doc = new window.jspdf.jsPDF({unit:"pt", format:"letter"});
+  var hasAT = typeof doc.autoTable === "function";
+  var y = 40;
+  doc.setFont("helvetica","bold"); doc.setFontSize(16);
+  doc.text("Adit Pay Terminal Adoption Analyzer", 40, y); y+=18;
+  doc.setFont("helvetica","normal"); doc.setFontSize(10);
+  doc.text("Executive Summary — generated "+new Date().toLocaleString(), 40, y); y+=20;
+
+  var kpiRows = [
+    ["Total Terminal Deals", fmtInt(agg.total)],["Adopted Deals", fmtInt(agg.adoptedCount)],
+    ["Active Deals", fmtInt(agg.activeCount)],["Adoption Rate", fmtPct(agg.adoptionRate,2)],
+    ["Total Adopted Volume", fmtMoney0(agg.totalAdoptedVolume)],["Active Volume", fmtMoney0(agg.totalActiveVolume)],
+    ["Total Adit Pay Volume", fmtMoney0(agg.totalVolume)],["Avg. Volume per Adopted Deal", fmtMoney0(agg.avgAdopted)]
+  ];
+  if (hasAT){
+    doc.autoTable({ startY:y, head:[["KPI","Value"]], body:kpiRows, styles:{fontSize:9}, headStyles:{fillColor:[47,111,94]} });
+    y = doc.lastAutoTable.finalY + 18;
+    doc.autoTable({ startY:y, head:[["Adopted Tier","Count","% Adopted","Cum.","Volume"]],
+      body: agg.adoptedTiers.map(function(t){return [t.label, t.count, fmtPct(t.pct), t.cumulative, fmtMoney0(t.volume)];}),
+      styles:{fontSize:8}, headStyles:{fillColor:[47,111,94]} });
+    y = doc.lastAutoTable.finalY + 18;
+    if (y > 680){ doc.addPage(); y = 40; }
+    doc.autoTable({ startY:y, head:[["Active Tier","Count","% Active","Cum.","Volume"]],
+      body: agg.activeTiers.map(function(t){return [t.label, t.count, fmtPct(t.pct), t.cumulative, fmtMoney0(t.volume)];}),
+      styles:{fontSize:8}, headStyles:{fillColor:[184,112,47]} });
+    y = doc.lastAutoTable.finalY + 18;
+    doc.addPage(); y = 40;
+    doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.text("Adoption Opportunity", 40, y); y+=16;
+    doc.autoTable({ startY:y, head:[["Metric","Value"]], body:[
+      ["Deals needed for 50% adoption", fmtInt(agg.opportunity.need50)],
+      ["Deals needed for 60% adoption", fmtInt(agg.opportunity.need60)],
+      ["Deals needed for 70% adoption", fmtInt(agg.opportunity.need70)],
+      ["Potential volume opportunity", fmtMoney0(agg.opportunity.potentialVolumeOpportunity)]
+    ], styles:{fontSize:9} });
+  } else {
+    doc.text("(Detailed tables unavailable — table plugin failed to load)", 40, y);
+  }
+  var blob = doc.output("blob");
+  offerDownload("Adit_Pay_Executive_Summary.pdf", blob);
+}
+
+/* ============================== wire drilldown -> explorer jump ============================== */
+document.getElementById("drilldownBody").addEventListener("dblclick", function(){});
+
+})();
+</script>
+</body>
+</html>
