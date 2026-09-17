@@ -1,8 +1,8 @@
 // Static file server + Google Sign-In gate for the Adit Pay Terminal Adoption
 // Analyzer. All data parsing, validation, calculations, and export still run
 // client-side in the visitor's browser — this server only serves the static
-// pages and checks that the visitor is signed in with an @adit.com Google
-// account before handing over the app itself.
+// pages and checks that the visitor is signed in with a Google account that
+// has been explicitly granted access before handing over the app itself.
 const express = require("express");
 const path = require("path");
 const cookieParser = require("cookie-parser");
@@ -14,9 +14,26 @@ const PORT = process.env.PORT || 3000;
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const SESSION_SECRET = process.env.SESSION_SECRET || "";
-const ALLOWED_DOMAIN = "adit.com";
 const SESSION_COOKIE = "session";
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+// --- Access control: allowlist only. Domain membership (e.g. @adit.com) is
+// NOT sufficient on its own — every account must be explicitly granted access.
+// The super admin manages who's allowed by setting ALLOWED_EMAILS in Railway's
+// environment variables (comma, semicolon, or newline separated). This one
+// address is always allowed as a safety net so the admin can never be locked
+// out even if ALLOWED_EMAILS is misconfigured or left unset.
+const SUPER_ADMIN_EMAILS = ["imran@adit.com"];
+const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || "")
+  .split(/[,;\n]/)
+  .map(function (e) { return e.trim().toLowerCase(); })
+  .filter(Boolean);
+
+function isEmailAllowed(email) {
+  if (!email) return false;
+  var lower = String(email).trim().toLowerCase();
+  return SUPER_ADMIN_EMAILS.indexOf(lower) !== -1 || ALLOWED_EMAILS.indexOf(lower) !== -1;
+}
 
 if (!GOOGLE_CLIENT_ID) {
   console.warn("[auth] GOOGLE_CLIENT_ID is not set — sign-in will not work until it is configured.");
@@ -67,12 +84,10 @@ app.post("/auth/google", async (req, res) => {
     });
     const payload = ticket.getPayload();
     const email = payload && payload.email;
-    const domainOk =
-      (payload && payload.hd === ALLOWED_DOMAIN) ||
-      (email && payload.email_verified && email.toLowerCase().endsWith("@" + ALLOWED_DOMAIN));
+    const allowed = payload && payload.email_verified && isEmailAllowed(email);
 
-    if (!domainOk) {
-      return res.status(403).json({ error: "Access is restricted to @" + ALLOWED_DOMAIN + " accounts." });
+    if (!allowed) {
+      return res.status(403).json({ error: "This Google account doesn't have access yet. Ask your admin to add it." });
     }
 
     const sessionToken = jwt.sign(
