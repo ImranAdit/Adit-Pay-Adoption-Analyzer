@@ -95,21 +95,31 @@
       showError(err.message || "Sign-in failed. Please try again.");
     });
   }
+  function waitForGoogle(timeoutMs, cb){
+    var start = Date.now();
+    (function poll(){
+      if (window.google && google.accounts && google.accounts.id){ cb(true); return; }
+      if (Date.now() - start > timeoutMs){ cb(false); return; }
+      setTimeout(poll, 100);
+    })();
+  }
   fetch("/auth/config").then(function(r){ return r.json(); }).then(function(cfg){
     if (!cfg || !cfg.clientId){
       showError("Sign-in isn't configured yet. Ask an admin to set GOOGLE_CLIENT_ID.");
       return;
     }
-    if (!window.google || !google.accounts || !google.accounts.id){
-      showError("Couldn't load Google Sign-In. Check your connection and reload.");
-      return;
-    }
-    google.accounts.id.initialize({
-      client_id: cfg.clientId,
-      callback: handleCredential
-    });
-    google.accounts.id.renderButton(document.getElementById("gsiBtn"), {
-      theme: "outline", size: "large", shape: "pill", width: 300, text: "signin_with"
+    waitForGoogle(8000, function(ok){
+      if (!ok){
+        showError("Couldn't load Google Sign-In. Check your connection and reload.");
+        return;
+      }
+      google.accounts.id.initialize({
+        client_id: cfg.clientId,
+        callback: handleCredential
+      });
+      google.accounts.id.renderButton(document.getElementById("gsiBtn"), {
+        theme: "outline", size: "large", shape: "pill", width: 300, text: "signin_with"
+      });
     });
   }).catch(function(){
     showError("Couldn't reach the sign-in service. Please reload.");
