@@ -769,9 +769,19 @@ function runValidation(){
   var idx = {};
   Object.keys(App.colMap).forEach(function(k){ idx[k] = App.headers.indexOf(App.colMap[k]); });
 
-  var totalRows = App.allDataRows.length;
+  // Fully blank rows (every cell empty) are spreadsheet artifacts -- e.g. trailing
+  // empty rows after the real data ends -- not real records. Drop them entirely
+  // here: not counted, not flagged, not shown anywhere in the tool.
+  var dataRows = [];
+  App.allDataRows.forEach(function(raw, i){
+    var isBlank = raw.every(function(c){ return c==null || String(c).trim()===""; });
+    if (!isBlank) dataRows.push({raw:raw, rowNum:i+2});
+  });
+
+  var totalRows = dataRows.length;
   var seenRecordNumbers = {};
-  App.allDataRows.forEach(function(r){
+  dataRows.forEach(function(d){
+    var r = d.raw;
     var rn = idx.recordNumber!=null && idx.recordNumber>=0 ? r[idx.recordNumber] : null;
     if (rn!=null && String(rn).trim()!==""){
       var key = String(rn).trim();
@@ -783,14 +793,8 @@ function runValidation(){
   var excludedCount=0, warnCount=0, cleanCount=0;
   var issues = []; // {rowNum, reason, severity, detail}
 
-  App.allDataRows.forEach(function(raw, i){
-    var rowNum = i+2; // account for header row, 1-indexed sheet rows
-    var isBlank = raw.every(function(c){ return c==null || String(c).trim()===""; });
-    if (isBlank){
-      excludedCount++;
-      issues.push({rowNum:rowNum, severity:"excluded", reason:"Blank row", detail:"All fields empty"});
-      return;
-    }
+  dataRows.forEach(function(d){
+    var raw = d.raw, rowNum = d.rowNum; // account for header row, 1-indexed sheet rows
 
     function get(key){ var i2=idx[key]; return (i2!=null && i2>=0) ? raw[i2] : null; }
 
