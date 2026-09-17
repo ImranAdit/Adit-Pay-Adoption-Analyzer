@@ -87,6 +87,20 @@
   }
   .btn-primary:hover{background:linear-gradient(155deg, var(--accent-strong), var(--accent-strong)); border-color:var(--accent-strong); box-shadow:0 2px 4px rgba(22,33,29,.12), 0 10px 22px rgba(31,82,69,.3); transform:translateY(-1px);}
   .btn-primary:disabled{opacity:.5; cursor:not-allowed; transform:none; box-shadow:none;}
+  .btn-ai{
+    display:inline-flex; align-items:center; gap:9px; position:relative; overflow:hidden;
+    background:linear-gradient(135deg, var(--accent), var(--accent-strong) 55%, var(--amber));
+    border-color:var(--accent-strong); font-size:14.5px; padding:11px 20px;
+    box-shadow:0 1px 2px rgba(22,33,29,.14), 0 10px 26px rgba(31,82,69,.3);
+  }
+  .btn-ai svg{flex:none;}
+  .btn-ai::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(120deg, transparent 35%, rgba(255,255,255,.4) 48%, transparent 62%);
+    transform:translateX(-120%); animation:aiShine 3.4s ease-in-out infinite;
+  }
+  .btn-ai:hover{transform:translateY(-1px); box-shadow:0 2px 5px rgba(22,33,29,.16), 0 14px 30px rgba(31,82,69,.36);}
+  @keyframes aiShine{ 0%,55%{transform:translateX(-120%);} 100%{transform:translateX(120%);} }
   .btn-ghost{border-color:transparent; background:transparent; box-shadow:none;}
   .btn-ghost:hover{background:var(--accent-soft); box-shadow:none;}
   .btn-sm{padding:6px 10px; font-size:12.5px;}
@@ -343,7 +357,10 @@
       <div class="sheet-picker" id="sheetPicker" hidden></div>
       <div id="validationPanel" hidden></div>
       <div id="generateRow" hidden style="margin-top:18px;">
-        <button class="btn btn-primary" id="generateBtn">Generate Analysis &rarr;</button>
+        <button class="btn btn-primary btn-ai" id="generateBtn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.9L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.6L12 2.5z"/><path d="M19 13.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6L15.5 17l2.6-.9.9-2.6z"/></svg>
+          Adit AI Analyzer
+        </button>
       </div>
     </section>
 
@@ -656,21 +673,12 @@ function handleFile(file){
 }
 
 function chooseInitialSheet(){
-  var picker = document.getElementById("sheetPicker");
+  // Auto-detect the raw-data worksheet silently — no confirmation step shown to the user.
   var match = App.sheetNames.find(function(n){ var nn=n.trim().toLowerCase(); return nn==="sheet0"||nn==="sheet 0"; });
   if (!match) match = App.sheetNames.find(function(n){ return n.trim().toLowerCase()==="zero"; });
-
-  if (match && App.sheetNames.length===1){
-    picker.hidden = true;
-    loadSheet(match);
-    return;
-  }
-  if (match){
-    // still show a lightweight picker so the user can override, pre-selected to the match
-    renderSheetPicker(match);
-  } else {
-    renderSheetPicker(App.sheetNames[0]);
-  }
+  if (!match) match = App.sheetNames[0];
+  document.getElementById("sheetPicker").hidden = true;
+  loadSheet(match);
 }
 
 function renderSheetPicker(preselect){
@@ -733,7 +741,7 @@ function renderFileMeta(missing){
     fmItem("Rows found", fmtInt(App.allDataRows.length)) +
     fmItem("Worksheet", App.chosenSheet) +
     fmItem("Status", missing.length ? '<span class="badge badge-bad">Missing required columns</span>' : '<span class="badge badge-ok">Columns recognized</span>');
-  document.getElementById("sheetPicker").hidden = !!document.getElementById("sheetSelect") ? document.getElementById("sheetPicker").hidden : true;
+  document.getElementById("sheetPicker").hidden = true;
 }
 function fmItem(label,val){ return '<div class="fm-item"><span class="fm-label">'+esc(label)+'</span><span class="fm-val">'+val+'</span></div>'; }
 
