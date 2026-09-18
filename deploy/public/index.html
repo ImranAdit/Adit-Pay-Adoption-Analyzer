@@ -212,8 +212,9 @@
 
   /* narrative strip */
   .narrative{
-    margin:16px 2px 0; font-family:"Fraunces","Georgia",serif; font-size:19px; line-height:1.45;
+    margin:20px 0 0; font-family:"Fraunces","Georgia",serif; font-size:19px; line-height:1.5;
     color:var(--ink); font-weight:500; text-wrap:balance; max-width:78ch;
+    padding:2px 0 2px 18px; border-left:3px solid var(--accent);
   }
   .narrative strong{color:var(--accent-strong); font-weight:700;}
   .narrative .n-amber{color:var(--amber); font-weight:700;}
@@ -275,23 +276,35 @@
   .filter-count{font-size:12.5px; color:var(--ink-soft);}
 
   /* reconciliation */
-  .recon-banner{display:flex; gap:10px; align-items:center; padding:12px 16px; border-radius:var(--radius-sm); margin-top:20px; font-size:13.5px; font-weight:500;}
+  .recon-banner{display:flex; gap:11px; align-items:center; padding:13px 18px; border-radius:var(--radius-sm); margin-top:20px; font-size:13.5px; font-weight:500;}
+  .recon-icon{display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; flex:none;}
+  .recon-icon svg{width:14px; height:14px;}
   .recon-ok{background:var(--accent-soft); color:var(--accent-strong); border:1px solid var(--accent);}
+  .recon-ok .recon-icon{background:var(--accent); color:#fff;}
   .recon-bad{background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger);}
+  .recon-bad .recon-icon{background:var(--danger); color:#fff;}
 
   /* opportunity + active analysis */
   .stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px;}
-  .stat-tile{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px 14px;}
-  .stat-tile .st-val{font-size:19px; font-weight:600; font-family:"IBM Plex Mono",monospace;}
-  .stat-tile .st-lbl{font-size:12px; color:var(--ink-soft); margin-top:2px;}
-  .opp-row{display:flex; gap:12px; flex-wrap:wrap; margin-top:14px;}
-  .opp-card{flex:1; min-width:150px; background:var(--accent-soft); border:1px solid var(--accent); border-radius:var(--radius-sm); padding:14px;}
-  .opp-card .opp-num{font-size:22px; font-weight:700; color:var(--accent-strong); font-family:"IBM Plex Mono",monospace;}
-  .opp-card .opp-lbl{font-size:12.5px; color:var(--ink-soft); margin-top:3px;}
+  .stat-tile{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-sm); padding:14px 16px; transition:border-color .2s ease;}
+  .stat-tile .st-val{font-size:20px; font-weight:700; letter-spacing:-.005em; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;}
+  .stat-tile .st-lbl{font-size:11px; color:var(--ink-soft); margin-top:5px; text-transform:uppercase; letter-spacing:.04em; font-weight:600;}
+  .opp-row{display:flex; gap:14px; flex-wrap:wrap; margin-top:14px;}
+  .opp-card{
+    flex:1; min-width:170px; background:var(--accent-soft); border:1px solid var(--accent); border-radius:var(--radius);
+    padding:18px; position:relative; overflow:hidden;
+    transition:box-shadow .25s ease, transform .25s ease;
+  }
+  .opp-card:hover{transform:translateY(-2px); box-shadow:0 3px 8px rgba(22,33,29,.08), 0 14px 28px rgba(31,82,69,.14);}
+  .opp-card .opp-num{font-size:27px; font-weight:700; letter-spacing:-.01em; color:var(--accent-strong); font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;}
+  .opp-card .opp-lbl{font-size:12.5px; color:var(--ink-soft); margin-top:5px; font-weight:500; line-height:1.35;}
 
   /* explorer */
   .explorer-toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px;}
   .explorer-toolbar input[type="search"]{flex:1; min-width:200px;}
+  .search-wrap{position:relative; flex:1; min-width:200px;}
+  .search-wrap svg{position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--ink-soft); pointer-events:none;}
+  .search-wrap input[type="search"]{width:100%; padding-left:33px;}
   th.sortable{cursor:pointer; user-select:none;}
   th.sortable .arrow{margin-left:3px; opacity:.5;}
   th.sortable.active .arrow{opacity:1; color:var(--accent);}
@@ -299,7 +312,7 @@
   .pager{display:flex; gap:10px; align-items:center; justify-content:flex-end; margin-top:10px; font-size:12.5px; color:var(--ink-soft);}
 
   /* modal */
-  .modal{position:fixed; inset:0; background:rgba(20,24,20,.5); z-index:100; display:flex; align-items:center; justify-content:center; padding:20px;}
+  .modal{position:fixed; inset:0; background:rgba(20,24,20,.55); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); z-index:100; display:flex; align-items:center; justify-content:center; padding:20px;}
   .modal-card{
     background:var(--surface); border-radius:var(--radius); max-width:960px; width:100%; max-height:86vh;
     display:flex; flex-direction:column; box-shadow:var(--shadow); border:1px solid var(--line);
@@ -398,7 +411,7 @@
         <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
           <div>
             <p class="section-eyebrow">Filters</p>
-            <h2 style="font-size:16px;">Narrow the dataset</h2>
+            <h2>Narrow the dataset</h2>
           </div>
         </div>
         <div class="filters-grid" id="filtersGrid" style="margin-top:14px;"></div>
@@ -414,7 +427,7 @@
 
       <section class="panel hero-panel">
         <p class="section-eyebrow">At a glance</p>
-        <h2 style="font-size:16px; margin-bottom:14px;">Adoption story</h2>
+        <h2 style="margin-bottom:14px;">Adoption story</h2>
         <div class="hero-grid">
           <div class="chart-card hero-card">
             <h3>Adoption rate</h3><p class="chart-sub">Adopted &divide; total terminal deals</p>
@@ -429,7 +442,7 @@
 
       <section class="panel">
         <p class="section-eyebrow">Visual summary</p>
-        <h2 style="font-size:16px; margin-bottom:14px;">Volume tier breakdown</h2>
+        <h2 style="margin-bottom:14px;">Volume tier breakdown</h2>
         <div class="charts-grid" id="chartsGrid">
           <div class="chart-card"><h3>Adopted deals by volume tier</h3><p class="chart-sub">Volume range vs. deal count</p><div class="chart-wrap"><canvas id="chartAdoptedTier"></canvas></div></div>
           <div class="chart-card"><h3>Active deals by volume tier</h3><p class="chart-sub">Volume range vs. deal count</p><div class="chart-wrap"><canvas id="chartActiveTier"></canvas></div></div>
@@ -445,10 +458,13 @@
 
       <section class="panel" id="explorerSection">
         <p class="section-eyebrow">Deal-level drilldown</p>
-        <h2 style="font-size:16px;">Explore every deal</h2>
+        <h2>Explore every deal</h2>
         <p class="panel-sub">Click any tier count above to jump here pre-filtered, or search and sort freely.</p>
         <div class="explorer-toolbar">
-          <input type="search" id="explorerSearch" placeholder="Search deal name, record #, CSM, pod, tech OB&hellip;">
+          <div class="search-wrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input type="search" id="explorerSearch" placeholder="Search deal name, record #, CSM, pod, tech OB&hellip;">
+          </div>
           <span class="filter-count" id="explorerCount"></span>
           <button class="btn btn-sm btn-ghost" id="explorerClearTier" hidden>Clear tier filter</button>
         </div>
@@ -1209,13 +1225,15 @@ function renderAll(){
   document.getElementById("filterCount").textContent = rows.length.toLocaleString()+" of "+App.processed.length.toLocaleString()+" deals match current filters";
 }
 
+var RECON_ICON_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>';
+var RECON_ICON_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 16.5h.01"/><path d="M10.6 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.4 3.9a2 2 0 0 0-3.4 0Z"/></svg>';
 function renderReconciliation(agg){
   var el = document.getElementById("reconciliationBanner");
   var failed = agg.reconciliation.filter(function(c){return !c.pass;});
   if (!failed.length){
-    el.innerHTML = '<div class="recon-banner recon-ok">&#10003; All reconciliation checks passed &mdash; tier totals match the executive summary.</div>';
+    el.innerHTML = '<div class="recon-banner recon-ok"><span class="recon-icon">'+RECON_ICON_OK+'</span>All reconciliation checks passed &mdash; tier totals match the executive summary.</div>';
   } else {
-    el.innerHTML = '<div class="recon-banner recon-bad">&#9888; Reconciliation issue detected: '+failed.map(function(f){return esc(f.name);}).join("; ")+'</div>';
+    el.innerHTML = '<div class="recon-banner recon-bad"><span class="recon-icon">'+RECON_ICON_WARN+'</span>Reconciliation issue detected: '+failed.map(function(f){return esc(f.name);}).join("; ")+'</div>';
   }
 }
 
@@ -1275,6 +1293,14 @@ function renderCharts(agg){
   destroyCharts();
   var ink = themeColor("--ink"), grid = CHART_COLORS.grid;
   Chart.defaults.color = ink; Chart.defaults.font.family = "IBM Plex Sans, sans-serif"; Chart.defaults.font.size=11;
+  Chart.defaults.plugins.tooltip.backgroundColor = "rgba(22,33,29,.94)";
+  Chart.defaults.plugins.tooltip.titleFont = {family:"IBM Plex Sans, sans-serif", weight:"600", size:12};
+  Chart.defaults.plugins.tooltip.bodyFont = {family:"IBM Plex Mono, monospace", size:12};
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius = 8;
+  Chart.defaults.plugins.tooltip.displayColors = false;
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.legend.labels.pointStyle = "circle";
 
   mkBar("chartAdoptedTier", agg.adoptedTiers.map(function(t){return t.label;}), agg.adoptedTiers.map(function(t){return t.count;}), CHART_COLORS.adopted, "adopted", "count");
   mkBar("chartActiveTier", agg.activeTiers.map(function(t){return t.label;}), agg.activeTiers.map(function(t){return t.count;}), CHART_COLORS.active, "active", "count");
@@ -1286,9 +1312,9 @@ function renderCharts(agg){
     data:{ labels:["Total Terminal Deals","Active Deals","Adopted Deals"],
       datasets:[{ data:[agg.total, agg.activeCount, agg.adoptedCount],
         backgroundColor:[CHART_COLORS.grid.replace(".18",".5"), CHART_COLORS.activeSoft, CHART_COLORS.adoptedSoft],
-        borderColor:["#9a988f", CHART_COLORS.active, CHART_COLORS.adopted], borderWidth:1.5, borderRadius:5 }]},
+        borderColor:["#9a988f", CHART_COLORS.active, CHART_COLORS.adopted], borderWidth:1.5, borderRadius:6 }]},
     options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ x:{grid:{color:grid}, ticks:{precision:0}}, y:{grid:{display:false}} } }
+      scales:{ x:{grid:{color:grid}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{display:false}} } }
   });
 
   var rCtx = document.getElementById("chartRate");
@@ -1315,11 +1341,11 @@ function renderCharts(agg){
     var ctx = document.getElementById(canvasId);
     App.charts[key] = new Chart(ctx, {
       type:"bar",
-      data:{ labels:labels, datasets:[{ data:data, backgroundColor: hexToRgba(color,.6), borderColor:color, borderWidth:1.5, borderRadius:4, maxBarThickness:34 }]},
+      data:{ labels:labels, datasets:[{ data:data, backgroundColor: hexToRgba(color,.6), borderColor:color, borderWidth:1.5, borderRadius:6, maxBarThickness:34, hoverBackgroundColor:hexToRgba(color,.78) }]},
       options:{ responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){ return fmt==="money"? fmtMoney0(c.parsed.y||c.parsed.x) : fmtInt(c.parsed.y||c.parsed.x); } } } },
-        scales:{ x:{ grid:{display:false}, ticks:{maxRotation:60, minRotation:60, autoSkip:false, font:{size:9.5}} },
-                 y:{ grid:{color:grid}, ticks:{ callback:function(v){ return fmt==="money"? "$"+abbrev(v) : v; } } } },
+        scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:{maxRotation:60, minRotation:60, autoSkip:false, font:{size:9.5}} },
+                 y:{ grid:{color:grid}, border:{display:false}, ticks:{ callback:function(v){ return fmt==="money"? "$"+abbrev(v) : v; } } } },
         onClick:function(evt, els){ if(!els.length) return; var i=els[0].index; var tierArr = key==="active"?agg.activeTiers:agg.adoptedTiers; openDrilldown(tierArr[i]); }
       }
     });
