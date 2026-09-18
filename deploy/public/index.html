@@ -121,14 +121,23 @@
 
   /* Upload */
   .dropzone{
-    border:1.5px dashed var(--line-strong); border-radius:var(--radius); padding:44px 20px;
-    text-align:center; cursor:pointer; transition:border-color .15s, background .15s;
+    max-width:560px; margin:4px auto 0; background:var(--paper);
+    border:1.5px dashed var(--line-strong); border-radius:var(--radius); padding:48px 24px;
+    text-align:center; cursor:pointer;
+    transition:border-color .2s ease, background .2s ease, transform .2s ease, box-shadow .2s ease;
   }
-  .dropzone.drag{border-color:var(--accent); background:var(--accent-soft);}
-  .dropzone svg{color:var(--accent);}
-  .dropzone p{margin:14px 0 2px; font-size:15.5px;}
-  .dropzone .hint{color:var(--ink-soft); font-size:12.5px; margin-top:4px;}
+  .dropzone:hover{border-color:var(--accent); background:var(--accent-soft); transform:translateY(-1px); box-shadow:var(--shadow);}
+  .dropzone.drag{border-color:var(--accent); background:var(--accent-soft); transform:translateY(-1px);}
+  .dropzone:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .dropzone-icon{
+    width:56px; height:56px; border-radius:50%; margin:0 auto; display:flex; align-items:center; justify-content:center;
+    background:var(--accent-soft); color:var(--accent-strong); transition:transform .2s ease;
+  }
+  .dropzone:hover .dropzone-icon{transform:scale(1.06);}
+  .dropzone p{margin:16px 0 2px; font-size:15.5px; font-weight:500;}
+  .dropzone .hint{color:var(--ink-soft); font-size:11.5px; margin-top:8px; text-transform:uppercase; letter-spacing:.05em;}
   .dropzone button{background:none;border:none;color:var(--accent);font-weight:600;cursor:pointer;padding:0;font-size:inherit;text-decoration:underline;}
+  .generate-row{margin-top:24px; text-align:center; animation:fadeInUp .4s ease both;}
 
   .file-meta{
     display:flex; gap:28px; flex-wrap:wrap; align-items:center; margin-top:18px; padding:14px 16px;
@@ -366,7 +375,7 @@
 
       <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload file">
         <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden />
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+        <span class="dropzone-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>
         <p>Drag &amp; drop your file, or <button type="button" id="browseBtn">browse</button></p>
         <p class="hint">.xlsx &middot; .xls &middot; .csv</p>
       </div>
@@ -374,7 +383,7 @@
       <div class="file-meta" id="fileMeta" hidden></div>
       <div class="sheet-picker" id="sheetPicker" hidden></div>
       <div id="validationPanel" hidden></div>
-      <div id="generateRow" hidden style="margin-top:18px;">
+      <div class="generate-row" id="generateRow" hidden>
         <button class="btn btn-primary btn-ai" id="generateBtn">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.9L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.6L12 2.5z"/><path d="M19 13.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6L15.5 17l2.6-.9.9-2.6z"/></svg>
           Adit AI Analyzer
@@ -665,6 +674,7 @@ function location_reset(){
   document.getElementById("dashboard").hidden=true;
   document.getElementById("topbarActions").hidden=true;
   document.getElementById("uploadSection").hidden=false;
+  document.getElementById("dropzone").hidden=false;
   destroyCharts();
 }
 
@@ -754,6 +764,7 @@ function buildColumnMap(rawHeaders){
 function renderFileMeta(missing){
   var el = document.getElementById("fileMeta");
   el.hidden = false;
+  document.getElementById("dropzone").hidden = true;
   el.innerHTML =
     fmItem("File", App.fileName) +
     fmItem("Rows found", fmtInt(App.allDataRows.length)) +
