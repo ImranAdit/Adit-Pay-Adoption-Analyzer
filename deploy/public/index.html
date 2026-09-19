@@ -68,7 +68,7 @@
   .topbar-actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
   .topbar-user{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
   .user-avatar{width:26px;height:26px;border-radius:99px;object-fit:cover;border:1px solid var(--line);}
-  .user-email{font-size:12.5px; color:var(--ink-soft);}
+  .user-name{font-size:12.5px; color:var(--ink-soft); font-weight:500;}
 
   @keyframes fadeInUp{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);}}
 
@@ -375,7 +375,7 @@
     </div>
     <div class="topbar-user" id="topbarUser">
       <img id="userAvatar" class="user-avatar" alt="" hidden>
-      <span id="userEmail" class="user-email"></span>
+      <span id="userName" class="user-name"></span>
       <a class="btn btn-ghost btn-sm" id="btnSignOut" href="/auth/logout" title="Sign out">Sign out</a>
     </div>
   </header>
@@ -673,9 +673,9 @@ document.getElementById("btnNewFile").addEventListener("click", function(){ loca
 
 fetch("/auth/me").then(function(r){ return r.ok ? r.json() : null; }).then(function(me){
   if (!me) return;
-  var emailEl = document.getElementById("userEmail");
+  var nameEl = document.getElementById("userName");
   var avatarEl = document.getElementById("userAvatar");
-  if (emailEl) emailEl.textContent = me.email || "";
+  if (nameEl) nameEl.textContent = me.name || me.email || "";
   if (avatarEl && me.picture){ avatarEl.src = me.picture; avatarEl.hidden = false; }
 }).catch(function(){});
 
