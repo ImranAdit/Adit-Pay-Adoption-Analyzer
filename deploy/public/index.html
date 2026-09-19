@@ -899,7 +899,7 @@ function runValidation(){
   };
 
   renderValidation({stop:false});
-  document.getElementById("generateRow").hidden = false;
+  proceedToDashboard();
 }
 
 function renderValidation(opts){
@@ -941,7 +941,7 @@ function renderValidation(opts){
 }
 function valTile(num,label,cls){ return '<div class="val-tile '+cls+'"><div class="vt-num">'+num+'</div><div class="vt-label">'+esc(label)+'</div></div>'; }
 
-document.getElementById("generateBtn").addEventListener("click", function(){
+function proceedToDashboard(){
   buildDistinctValues();
   buildFilterUI();
   document.getElementById("uploadSection").hidden = true;
@@ -949,7 +949,8 @@ document.getElementById("generateBtn").addEventListener("click", function(){
   document.getElementById("topbarActions").hidden = false;
   renderAll();
   window.scrollTo({top:0, behavior:"smooth"});
-});
+}
+document.getElementById("generateBtn").addEventListener("click", proceedToDashboard);
 
 /* ============================== filters ============================== */
 
