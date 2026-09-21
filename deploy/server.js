@@ -45,6 +45,61 @@ const EFFECTIVE_SESSION_SECRET = SESSION_SECRET || "insecure-dev-secret-change-m
 
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
+// --- Zoho CRM integration (read-only) ---
+// Pulls deal data straight from Zoho CRM instead of requiring a manual file
+// upload. Credentials come from a Self Client set up in the Zoho API Console
+// (read-only scopes only) and are stored as Railway environment variables —
+// never exposed to the browser.
+const ZOHO_CLIENT_ID = process.env.ZOHO_CLIENT_ID || "";
+const ZOHO_CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET || "";
+const ZOHO_REFRESH_TOKEN = process.env.ZOHO_REFRESH_TOKEN || "";
+const ZOHO_API_DOMAIN = process.env.ZOHO_API_DOMAIN || "https://www.zohoapis.com";
+const ZOHO_ACCOUNTS_DOMAIN = process.env.ZOHO_ACCOUNTS_DOMAIN || "https://accounts.zoho.com";
+
+if (!ZOHO_CLIENT_ID || !ZOHO_CLIENT_SECRET || !ZOHO_REFRESH_TOKEN) {
+  console.warn("[zoho] ZOHO_CLIENT_ID/ZOHO_CLIENT_SECRET/ZOHO_REFRESH_TOKEN are not fully set — loading from Zoho will not work until configured.");
+}
+
+let zohoTokenCache = { accessToken: null, expiresAt: 0 };
+
+async function getZohoAccessToken() {
+  const now = Date.now();
+  if (zohoTokenCache.accessToken && zohoTokenCache.expiresAt > now + 60000) {
+    return zohoTokenCache.accessToken;
+  }
+  if (!ZOHO_CLIENT_ID || !ZOHO_CLIENT_SECRET || !ZOHO_REFRESH_TOKEN) {
+    throw new Error("Zoho integration is not configured (missing ZOHO_CLIENT_ID/ZOHO_CLIENT_SECRET/ZOHO_REFRESH_TOKEN).");
+  }
+  const params = new URLSearchParams({
+    client_id: ZOHO_CLIENT_ID,
+    client_secret: ZOHO_CLIENT_SECRET,
+    grant_type: "refresh_token",
+    refresh_token: ZOHO_REFRESH_TOKEN,
+  });
+  const resp = await fetch(ZOHO_ACCOUNTS_DOMAIN + "/oauth/v2/token", { method: "POST", body: params });
+  const data = await resp.json();
+  if (!data.access_token) {
+    throw new Error("Zoho token refresh failed: " + JSON.stringify(data));
+  }
+  zohoTokenCache = {
+    accessToken: data.access_token,
+    expiresAt: now + (data.expires_in ? data.expires_in * 1000 : 55 * 60 * 1000),
+  };
+  return zohoTokenCache.accessToken;
+}
+
+async function zohoApiGet(pathAndQuery) {
+  const token = await getZohoAccessToken();
+  const resp = await fetch(ZOHO_API_DOMAIN + pathAndQuery, {
+    headers: { Authorization: "Zoho-oauthtoken " + token },
+  });
+  const data = await resp.json();
+  if (!resp.ok) {
+    throw new Error("Zoho API error " + resp.status + ": " + JSON.stringify(data));
+  }
+  return data;
+}
+
 // Trust Railway's proxy so secure cookies work correctly behind TLS termination.
 app.set("trust proxy", 1);
 app.use(express.json());
@@ -117,6 +172,27 @@ app.get("/auth/logout", (req, res) => {
 
 app.get("/auth/me", requireAuth, (req, res) => {
   res.json({ email: req.user.email, name: req.user.name, picture: req.user.picture });
+});
+
+// TEMP DEBUG ROUTE — used only to inspect real Zoho field names while wiring
+// up the Zoho sync feature. Remove once that's done. Gated behind the same
+// Google sign-in as the rest of the app.
+app.get("/api/debug/zoho-fields", requireAuth, async (req, res) => {
+  try {
+    const data = await zohoApiGet("/crm/v8/settings/fields?module=Deals");
+    const keywords = ["pay", "terminal", "record", "csm", "tech", "agreement", "adopt", "stage", "package", "score", "status"];
+    const filtered = (data.fields || [])
+      .filter(function (f) {
+        const n = (String(f.api_name) + " " + String(f.field_label)).toLowerCase();
+        return keywords.some(function (k) { return n.indexOf(k) !== -1; });
+      })
+      .map(function (f) {
+        return { api_name: f.api_name, field_label: f.field_label, data_type: f.data_type };
+      });
+    res.json({ count: filtered.length, fields: filtered });
+  } catch (err) {
+    res.status(500).json({ error: String((err && err.message) || err) });
+  }
 });
 
 app.use(requireAuth);
