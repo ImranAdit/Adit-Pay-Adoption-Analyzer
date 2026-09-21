@@ -1289,6 +1289,80 @@ function destroyCharts(){ Object.keys(App.charts).forEach(function(k){ if(App.ch
 
 function themeColor(varName){ return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
 
+/* -- premium chart shading: metallic gradients + soft lift shadows. Purely visual;
+      does not touch any computed value, only how existing series are painted. -- */
+function shadeHex(hex, amt){
+  var m = hex.replace("#",""); var r=parseInt(m.substr(0,2),16), g=parseInt(m.substr(2,2),16), b=parseInt(m.substr(4,2),16);
+  function mix(c){ return amt>=0 ? Math.min(255, Math.round(c + (255-c)*amt)) : Math.max(0, Math.round(c*(1+amt))); }
+  return "rgb("+mix(r)+","+mix(g)+","+mix(b)+")";
+}
+function verticalMetalGradient(chart, hex){
+  var area = chart.chartArea;
+  if (!area) return hexToRgba(hex,.8);
+  var g = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+  g.addColorStop(0, shadeHex(hex,.5));
+  g.addColorStop(.42, shadeHex(hex,.08));
+  g.addColorStop(1, shadeHex(hex,-.22));
+  return g;
+}
+function horizontalMetalGradient(chart, hex){
+  var area = chart.chartArea;
+  if (!area) return hexToRgba(hex,.8);
+  var g = chart.ctx.createLinearGradient(area.left, 0, area.right, 0);
+  g.addColorStop(0, shadeHex(hex,-.15));
+  g.addColorStop(.5, shadeHex(hex,.42));
+  g.addColorStop(1, shadeHex(hex,.02));
+  return g;
+}
+function ringGeometry(chart, cutoutRatio){
+  var area = chart.chartArea;
+  if (!area) return null;
+  var cx = (area.left+area.right)/2, cy = (area.top+area.bottom)/2;
+  var outerR = Math.max(1, Math.min(area.width, area.height)/2);
+  var innerR = outerR * (cutoutRatio==null? .6 : cutoutRatio);
+  return {cx:cx, cy:cy, outerR:outerR, innerR:innerR};
+}
+function radialMetalGradient(chart, hex, cutoutRatio){
+  // Computed from chartArea (not the arc element) since the arc's own geometry
+  // is not yet populated the first time this scriptable color is resolved.
+  var geo = ringGeometry(chart, cutoutRatio);
+  if (!geo) return hexToRgba(hex,.85);
+  var g = chart.ctx.createRadialGradient(geo.cx, geo.cy, geo.innerR, geo.cx, geo.cy, geo.outerR);
+  g.addColorStop(0, shadeHex(hex,.4));
+  g.addColorStop(.55, shadeHex(hex,.05));
+  g.addColorStop(1, shadeHex(hex,-.2));
+  return g;
+}
+function liftShadowPlugin(pluginId, blur, dy, alpha){
+  return {
+    id: pluginId,
+    beforeDatasetsDraw: function(chart){ chart.ctx.save(); chart.ctx.shadowColor = "rgba(22,33,29,"+(alpha==null?.3:alpha)+")"; chart.ctx.shadowBlur = blur; chart.ctx.shadowOffsetY = dy; },
+    afterDatasetsDraw: function(chart){ chart.ctx.restore(); }
+  };
+}
+function ringGlossPlugin(cutoutRatio){
+  return {
+    id: "ringGloss",
+    afterDatasetsDraw: function(chart){
+      var geo = ringGeometry(chart, cutoutRatio);
+      if (!geo) return;
+      var ctx = chart.ctx;
+      ctx.save();
+      var g = ctx.createLinearGradient(geo.cx, geo.cy - geo.outerR, geo.cx, geo.cy);
+      g.addColorStop(0, "rgba(255,255,255,.55)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.globalCompositeOperation = "overlay";
+      ctx.beginPath();
+      ctx.arc(geo.cx, geo.cy, geo.outerR, -Math.PI*0.92, -Math.PI*0.08);
+      ctx.arc(geo.cx, geo.cy, geo.innerR, -Math.PI*0.08, -Math.PI*0.92, true);
+      ctx.closePath();
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.restore();
+    }
+  };
+}
+
 function renderCharts(agg){
   if (typeof Chart === "undefined") return;
   destroyCharts();
@@ -1307,48 +1381,60 @@ function renderCharts(agg){
   mkBar("chartActiveTier", agg.activeTiers.map(function(t){return t.label;}), agg.activeTiers.map(function(t){return t.count;}), CHART_COLORS.active, "active", "count");
   mkBar("chartAdoptedVolume", agg.adoptedTiers.map(function(t){return t.label;}), agg.adoptedTiers.map(function(t){return t.volume;}), CHART_COLORS.adopted, "adoptedVol", "money");
 
+  var funnelBaseColors = ["#9a988f", CHART_COLORS.active, CHART_COLORS.adopted];
   var fCtx = document.getElementById("chartFunnel");
   App.charts.funnel = new Chart(fCtx, {
     type:"bar",
     data:{ labels:["Total Terminal Deals","Active Deals","Adopted Deals"],
       datasets:[{ data:[agg.total, agg.activeCount, agg.adoptedCount],
-        backgroundColor:[CHART_COLORS.grid.replace(".18",".5"), CHART_COLORS.activeSoft, CHART_COLORS.adoptedSoft],
-        borderColor:["#9a988f", CHART_COLORS.active, CHART_COLORS.adopted], borderWidth:1.5, borderRadius:6 }]},
+        backgroundColor:function(c){ return horizontalMetalGradient(c.chart, funnelBaseColors[c.dataIndex]); },
+        borderColor:funnelBaseColors, borderWidth:1.5, borderRadius:8 }]},
     options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ x:{grid:{color:grid}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{display:false}} } }
+      scales:{ x:{grid:{color:grid}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{display:false}} } },
+    plugins:[liftShadowPlugin("funnelLift", 10, 4, .22)]
   });
 
   var rCtx = document.getElementById("chartRate");
+  var rateBaseColors = [CHART_COLORS.adopted, "#9a988f"];
   App.charts.rate = new Chart(rCtx, {
     type:"doughnut",
     data:{ labels:["Adopted","Remaining"], datasets:[{ data:[agg.adoptedCount, Math.max(0,agg.total-agg.adoptedCount)],
-      backgroundColor:[CHART_COLORS.adopted, grid.replace(".18",".35")], borderWidth:0 }]},
-    options:{ responsive:true, maintainAspectRatio:false, cutout:"72%", plugins:{legend:{position:"bottom", labels:{boxWidth:10,padding:12}}} },
-    plugins:[{
-      id:"centerRate",
-      afterDraw:function(chart){
-        var ctx = chart.ctx; var w=chart.width, h=chart.height;
-        ctx.save(); ctx.textAlign="center"; ctx.textBaseline="middle";
-        ctx.font="600 20px IBM Plex Mono, monospace"; ctx.fillStyle=ink;
-        ctx.fillText(fmtPct(agg.adoptionRate), w/2, h/2-6);
-        ctx.font="500 10px IBM Plex Sans, sans-serif"; ctx.fillStyle=themeColor("--ink-soft");
-        ctx.fillText("adopted", w/2, h/2+14);
-        ctx.restore();
+      backgroundColor:function(c){ return radialMetalGradient(c.chart, rateBaseColors[c.dataIndex], .6); },
+      borderWidth:0, borderRadius:10, spacing:3 }]},
+    options:{ responsive:true, maintainAspectRatio:false, cutout:"60%", plugins:{legend:{position:"bottom", labels:{boxWidth:10,padding:12}}} },
+    plugins:[
+      liftShadowPlugin("ringLift", 14, 6, .26),
+      ringGlossPlugin(.6),
+      {
+        id:"centerRate",
+        afterDraw:function(chart){
+          var ctx = chart.ctx; var w=chart.width, h=chart.height;
+          ctx.save(); ctx.textAlign="center"; ctx.textBaseline="middle";
+          ctx.font="600 20px IBM Plex Mono, monospace"; ctx.fillStyle=ink;
+          ctx.fillText(fmtPct(agg.adoptionRate), w/2, h/2-6);
+          ctx.font="500 10px IBM Plex Sans, sans-serif"; ctx.fillStyle=themeColor("--ink-soft");
+          ctx.fillText("adopted", w/2, h/2+14);
+          ctx.restore();
+        }
       }
-    }]
+    ]
   });
 
   function mkBar(canvasId, labels, data, color, key, fmt){
     var ctx = document.getElementById(canvasId);
     App.charts[key] = new Chart(ctx, {
       type:"bar",
-      data:{ labels:labels, datasets:[{ data:data, backgroundColor: hexToRgba(color,.6), borderColor:color, borderWidth:1.5, borderRadius:6, maxBarThickness:34, hoverBackgroundColor:hexToRgba(color,.78) }]},
+      data:{ labels:labels, datasets:[{ data:data,
+        backgroundColor: function(c){ return verticalMetalGradient(c.chart, color); },
+        borderColor:color, borderWidth:1.5, borderRadius:8, maxBarThickness:34,
+        hoverBackgroundColor: function(c){ return verticalMetalGradient(c.chart, shadeHex(color,.15)); } }]},
       options:{ responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){ return fmt==="money"? fmtMoney0(c.parsed.y||c.parsed.x) : fmtInt(c.parsed.y||c.parsed.x); } } } },
         scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:{maxRotation:60, minRotation:60, autoSkip:false, font:{size:9.5}} },
                  y:{ grid:{color:grid}, border:{display:false}, ticks:{ callback:function(v){ return fmt==="money"? "$"+abbrev(v) : v; } } } },
         onClick:function(evt, els){ if(!els.length) return; var i=els[0].index; var tierArr = key==="active"?agg.activeTiers:agg.adoptedTiers; openDrilldown(tierArr[i]); }
-      }
+      },
+      plugins:[liftShadowPlugin("barLift-"+key, 8, 3, .2)]
     });
   }
 }
