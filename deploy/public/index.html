@@ -293,15 +293,6 @@
   .filters-foot{display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:14px; border-top:1px solid var(--line);}
   .filter-count{font-size:12.5px; color:var(--ink-soft);}
 
-  /* reconciliation */
-  .recon-banner{display:flex; gap:11px; align-items:center; padding:13px 18px; border-radius:var(--radius-sm); margin-top:20px; font-size:13.5px; font-weight:500;}
-  .recon-icon{display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; flex:none;}
-  .recon-icon svg{width:14px; height:14px;}
-  .recon-ok{background:var(--accent-soft); color:var(--accent-strong); border:1px solid var(--accent);}
-  .recon-ok .recon-icon{background:var(--accent); color:#fff;}
-  .recon-bad{background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger);}
-  .recon-bad .recon-icon{background:var(--danger); color:#fff;}
-
   /* opportunity + active analysis */
   .stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px;}
   .stat-tile{
@@ -447,8 +438,6 @@
     </section>
 
     <section id="dashboard" hidden>
-      <div id="reconciliationBanner"></div>
-
       <section class="panel" id="filtersPanel" hidden>
         <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
           <div>
@@ -1253,7 +1242,6 @@ function renderAll(){
   var rows = getFilteredRows();
   var agg = aggregate(rows);
   lastAgg = agg;
-  renderReconciliation(agg);
   renderKpis(agg);
   renderNarrative(agg);
   renderCharts(agg);
@@ -1266,18 +1254,6 @@ function renderAll(){
   renderValidationDetail();
   var dot = document.getElementById("filterActiveDot"); dot.hidden = countActiveFilters()===0;
   document.getElementById("filterCount").textContent = rows.length.toLocaleString()+" of "+App.processed.length.toLocaleString()+" deals match current filters";
-}
-
-var RECON_ICON_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>';
-var RECON_ICON_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 16.5h.01"/><path d="M10.6 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.4 3.9a2 2 0 0 0-3.4 0Z"/></svg>';
-function renderReconciliation(agg){
-  var el = document.getElementById("reconciliationBanner");
-  var failed = agg.reconciliation.filter(function(c){return !c.pass;});
-  if (!failed.length){
-    el.innerHTML = '<div class="recon-banner recon-ok"><span class="recon-icon">'+RECON_ICON_OK+'</span>All reconciliation checks passed &mdash; tier totals match the executive summary.</div>';
-  } else {
-    el.innerHTML = '<div class="recon-banner recon-bad"><span class="recon-icon">'+RECON_ICON_WARN+'</span>Reconciliation issue detected: '+failed.map(function(f){return esc(f.name);}).join("; ")+'</div>';
-  }
 }
 
 var KPI_ICONS = {
