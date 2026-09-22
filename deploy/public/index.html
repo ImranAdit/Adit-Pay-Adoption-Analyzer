@@ -403,7 +403,7 @@
           <button data-export="pdf">Summary (.pdf)</button>
         </div>
       </div>
-      <button class="btn btn-ghost" id="btnNewFile">New file</button>
+      <button class="btn btn-ghost" id="btnNewFile" title="Upload a new file to replace the current dataset">Replace Data</button>
     </div>
     <div class="topbar-user" id="topbarUser">
       <img id="userAvatar" class="user-avatar" alt="" hidden>
@@ -638,6 +638,18 @@ function parseDateLoose(v){
   }
   return null;
 }
+// Re-applies the existing date parser to rows that came back from the server
+// (JSON turns Date objects into ISO strings). Every other field is left
+// untouched, and the parsing logic itself is unchanged — this only restores
+// the same Date objects a fresh upload would have produced.
+function reviveProcessedRows(rows){
+  return (rows||[]).map(function(r){
+    var copy = Object.assign({}, r);
+    copy.payAdoptDate = parseDateLoose(r.payAdoptDate);
+    copy.agreementSignedDate = parseDateLoose(r.agreementSignedDate);
+    return copy;
+  });
+}
 function parseVolume(v){
   if (v==null || v==="" ) return {value:null, blank:true, valid:true};
   if (typeof v === "number"){ return {value:v, blank:false, valid:!isNaN(v)}; }
@@ -708,6 +720,25 @@ fetch("/auth/me").then(function(r){ return r.ok ? r.json() : null; }).then(funct
   if (nameEl) nameEl.textContent = me.name || me.email || "";
   if (avatarEl && me.picture){ avatarEl.src = me.picture; avatarEl.hidden = false; }
 }).catch(function(){});
+
+// On page load, check whether a dataset was already uploaded (by anyone) and,
+// if so, load straight into the dashboard instead of showing the upload
+// screen. Reuses the exact same rendering path a manual upload uses
+// (proceedToDashboard/renderAll), so nothing about how the dashboard is built
+// changes — only how App.processed/App.validation get populated before it runs.
+function tryAutoLoadDataset(){
+  fetch("/api/dataset").then(function(r){ return r.ok ? r.json() : null; }).then(function(data){
+    if (!data || !data.exists || !data.processed || !data.processed.length) return;
+    App.fileName = data.fileName || null;
+    App.processed = reviveProcessedRows(data.processed);
+    App.validation = data.validation || {
+      totalRows: App.processed.length, validRecords: App.processed.length,
+      warnRecords: 0, excludedRecords: 0, includedRecords: App.processed.length, issues: []
+    };
+    proceedToDashboard();
+  }).catch(function(err){ console.warn("Could not auto-load previous dataset:", err); });
+}
+tryAutoLoadDataset();
 
 function location_reset(){
   App.workbook=null; App.sheetNames=[]; App.chosenSheet=null; App.fileName=null;
@@ -930,6 +961,19 @@ function runValidation(){
 
   renderValidation({stop:false});
   proceedToDashboard();
+  persistDataset();
+}
+
+// Saves the freshly-processed dataset on the server so it's there next time
+// anyone signs in. Fire-and-forget: it never blocks or alters the upload flow
+// above, and a failure here just means the next login falls back to the
+// upload screen as before.
+function persistDataset(){
+  fetch("/api/dataset", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileName: App.fileName, processed: App.processed, validation: App.validation })
+  }).catch(function(err){ console.warn("Could not save dataset for next login:", err); });
 }
 
 function renderValidation(opts){
