@@ -413,7 +413,10 @@
   </header>
 
   <main>
-    <section id="uploadSection" class="panel upload-panel">
+    <section id="initialLoading" class="panel" style="text-align:center; padding:56px 24px;">
+      <p class="panel-sub" style="margin:0;">Loading your dashboard&hellip;</p>
+    </section>
+    <section id="uploadSection" class="panel upload-panel" hidden>
       <p class="section-eyebrow">Step 1 &middot; 2</p>
       <h2>Upload raw deal data</h2>
       <p class="panel-sub">Drop the raw Adit Pay export below. Nothing is uploaded anywhere &mdash; the file is processed entirely in this browser tab.</p>
@@ -726,17 +729,28 @@ fetch("/auth/me").then(function(r){ return r.ok ? r.json() : null; }).then(funct
 // screen. Reuses the exact same rendering path a manual upload uses
 // (proceedToDashboard/renderAll), so nothing about how the dashboard is built
 // changes — only how App.processed/App.validation get populated before it runs.
+// The upload screen stays hidden (behind a brief "loading" placeholder) until
+// this check comes back, so it never flashes on screen before disappearing.
 function tryAutoLoadDataset(){
   fetch("/api/dataset").then(function(r){ return r.ok ? r.json() : null; }).then(function(data){
-    if (!data || !data.exists || !data.processed || !data.processed.length) return;
+    if (!data || !data.exists || !data.processed || !data.processed.length){
+      document.getElementById("initialLoading").hidden = true;
+      document.getElementById("uploadSection").hidden = false;
+      return;
+    }
     App.fileName = data.fileName || null;
     App.processed = reviveProcessedRows(data.processed);
     App.validation = data.validation || {
       totalRows: App.processed.length, validRecords: App.processed.length,
       warnRecords: 0, excludedRecords: 0, includedRecords: App.processed.length, issues: []
     };
+    document.getElementById("initialLoading").hidden = true;
     proceedToDashboard();
-  }).catch(function(err){ console.warn("Could not auto-load previous dataset:", err); });
+  }).catch(function(err){
+    console.warn("Could not auto-load previous dataset:", err);
+    document.getElementById("initialLoading").hidden = true;
+    document.getElementById("uploadSection").hidden = false;
+  });
 }
 tryAutoLoadDataset();
 
