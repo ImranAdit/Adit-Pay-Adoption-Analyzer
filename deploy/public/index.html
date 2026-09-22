@@ -788,13 +788,24 @@ function loadFromZoho(opts){
 // get populated before it runs. The upload screen stays hidden (behind a
 // brief "loading" placeholder) until this check comes back, so it never
 // flashes on screen before disappearing.
+// On page load, load the last dataset stored on the server so every
+// signed-in user sees a dashboard on login instead of an empty upload
+// screen, exactly as before. Reuses the exact same rendering path a manual
+// upload uses (proceedToDashboard/renderAll), so nothing about how the
+// dashboard is built changes — only how App.processed/App.validation get
+// populated before it runs. The upload screen stays hidden (behind a brief
+// "loading" placeholder) until this check comes back, so it never flashes
+// on screen before disappearing.
+//
+// This deliberately does NOT call Zoho automatically: a full Deals-module
+// sync can mean paging through tens of thousands of records (confirmed
+// against the real account — it isn't scoped to just Adit Pay terminal
+// deals), which takes far too long to block every login on. Pulling fresh
+// Zoho data stays an explicit action via the "Sync from Zoho" button, whose
+// result then gets cached through persistDataset() same as an upload, so
+// the next login loads that instantly too.
 function tryAutoLoadDataset(){
-  loadFromZoho({silent:true}).then(function(loaded){
-    if (!loaded) return loadStoredDataset();
-  }).catch(function(err){
-    console.warn("Zoho auto-load not available yet, falling back to the stored dataset:", err);
-    return loadStoredDataset();
-  });
+  loadStoredDataset();
 }
 
 function loadStoredDataset(){
