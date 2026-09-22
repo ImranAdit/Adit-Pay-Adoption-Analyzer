@@ -403,6 +403,7 @@
           <button data-export="pdf">Summary (.pdf)</button>
         </div>
       </div>
+      <button class="btn btn-ghost" id="btnSyncZoho" title="Pull the latest deals from Zoho CRM">Sync from Zoho</button>
       <button class="btn btn-ghost" id="btnNewFile" title="Upload a new file to replace the current dataset">Replace Data</button>
     </div>
     <div class="topbar-user" id="topbarUser">
@@ -716,6 +717,18 @@ fileInput.addEventListener("change", function(e){
 
 document.getElementById("btnNewFile").addEventListener("click", function(){ location_reset(); });
 
+document.getElementById("btnSyncZoho").addEventListener("click", function(){
+  var btn = document.getElementById("btnSyncZoho");
+  var original = btn.textContent;
+  btn.disabled = true; btn.textContent = "Syncing…";
+  loadFromZoho({silent:false}).then(function(){
+    btn.disabled = false; btn.textContent = original;
+  }).catch(function(err){
+    btn.disabled = false; btn.textContent = original;
+    alert("Zoho sync failed: " + ((err && err.message) || err));
+  });
+});
+
 fetch("/auth/me").then(function(r){ return r.ok ? r.json() : null; }).then(function(me){
   if (!me) return;
   var nameEl = document.getElementById("userName");
@@ -724,15 +737,68 @@ fetch("/auth/me").then(function(r){ return r.ok ? r.json() : null; }).then(funct
   if (avatarEl && me.picture){ avatarEl.src = me.picture; avatarEl.hidden = false; }
 }).catch(function(){});
 
-// On page load, check whether a dataset was already uploaded (by anyone) and,
-// if so, load straight into the dashboard instead of showing the upload
-// screen. Reuses the exact same rendering path a manual upload uses
-// (proceedToDashboard/renderAll), so nothing about how the dashboard is built
-// changes — only how App.processed/App.validation get populated before it runs.
-// The upload screen stays hidden (behind a brief "loading" placeholder) until
-// this check comes back, so it never flashes on screen before disappearing.
+// Pulls live deal data from Zoho CRM (via the server, which alone holds the
+// credentials) and runs it through the exact same column-mapping/validation
+// pipeline an uploaded spreadsheet already uses (buildColumnMap + REQUIRED_KEYS
+// + runValidation) — so nothing about how a dataset is validated, calculated,
+// or displayed differs by source. Used both for the automatic post-login
+// load below and for the manual "Sync from Zoho" button.
+// opts.silent=true (auto-load path): resolves to false instead of showing a
+// "missing columns" error screen, so the caller can quietly fall back to the
+// last stored dataset when Zoho isn't configured/reachable/mapped yet.
+function loadFromZoho(opts){
+  opts = opts || {};
+  return fetch("/api/zoho/deals").then(function(r){
+    return r.json().catch(function(){ return null; }).then(function(data){ return {ok:r.ok, data:data}; });
+  }).then(function(res){
+    if (!res.ok || !res.data){
+      throw new Error((res.data && res.data.error) || "Could not reach Zoho CRM.");
+    }
+    var headers = res.data.headers, rows = res.data.rows;
+    if (!Array.isArray(headers) || !Array.isArray(rows) || !rows.length){
+      throw new Error("Zoho CRM returned no deal records.");
+    }
+    buildColumnMap(headers);
+    var missing = REQUIRED_KEYS.filter(function(k){ return !App.colMap[k]; });
+    if (missing.length && opts.silent){
+      throw new Error("Zoho fields for one or more required columns are not mapped yet.");
+    }
+    document.getElementById("initialLoading").hidden = true;
+    App.fileName = "Zoho CRM (synced " + new Date().toLocaleString() + ")";
+    App.chosenSheet = "Zoho CRM";
+    App.headers = headers;
+    App.allDataRows = rows;
+    renderFileMeta(missing);
+    if (missing.length){
+      renderValidation({stop:true, missing:missing});
+      document.getElementById("generateRow").hidden = true;
+      return true;
+    }
+    runValidation();
+    return true;
+  });
+}
+
+// On page load, try Zoho CRM first (if configured and its fields map cleanly);
+// if that isn't available yet, fall back to the last dataset stored on the
+// server so every signed-in user still sees a dashboard on login instead of
+// an empty upload screen, exactly as before. Reuses the exact same rendering
+// path a manual upload uses (proceedToDashboard/renderAll), so nothing about
+// how the dashboard is built changes — only how App.processed/App.validation
+// get populated before it runs. The upload screen stays hidden (behind a
+// brief "loading" placeholder) until this check comes back, so it never
+// flashes on screen before disappearing.
 function tryAutoLoadDataset(){
-  fetch("/api/dataset").then(function(r){ return r.ok ? r.json() : null; }).then(function(data){
+  loadFromZoho({silent:true}).then(function(loaded){
+    if (!loaded) return loadStoredDataset();
+  }).catch(function(err){
+    console.warn("Zoho auto-load not available yet, falling back to the stored dataset:", err);
+    return loadStoredDataset();
+  });
+}
+
+function loadStoredDataset(){
+  return fetch("/api/dataset").then(function(r){ return r.ok ? r.json() : null; }).then(function(data){
     if (!data || !data.exists || !data.processed || !data.processed.length){
       document.getElementById("initialLoading").hidden = true;
       document.getElementById("uploadSection").hidden = false;
