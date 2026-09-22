@@ -60,6 +60,10 @@ const ZOHO_ACCOUNTS_DOMAIN = process.env.ZOHO_ACCOUNTS_DOMAIN || "https://accoun
 if (!ZOHO_CLIENT_ID || !ZOHO_CLIENT_SECRET || !ZOHO_REFRESH_TOKEN) {
   console.warn("[zoho] ZOHO_CLIENT_ID/ZOHO_CLIENT_SECRET/ZOHO_REFRESH_TOKEN are not fully set — loading from Zoho will not work until configured.");
 }
+// Diagnostic only — booleans, never the actual values.
+console.log("[zoho] ZOHO_CLIENT_ID configured:", !!ZOHO_CLIENT_ID);
+console.log("[zoho] ZOHO_CLIENT_SECRET configured:", !!ZOHO_CLIENT_SECRET);
+console.log("[zoho] ZOHO_REFRESH_TOKEN configured:", !!ZOHO_REFRESH_TOKEN);
 
 let zohoTokenCache = { accessToken: null, expiresAt: 0 };
 
@@ -86,6 +90,8 @@ async function getZohoAccessToken() {
     accessToken: data.access_token,
     expiresAt: now + (data.expires_in ? data.expires_in * 1000 : 55 * 60 * 1000),
   };
+  // Diagnostic only — confirms a token was obtained, never logs the value.
+  console.log("[zoho] Zoho access token obtained:", true);
   return zohoTokenCache.accessToken;
 }
 
@@ -99,6 +105,97 @@ async function zohoApiGet(pathAndQuery) {
     throw new Error("Zoho API error " + resp.status + ": " + JSON.stringify(data));
   }
   return data;
+}
+
+// --- Zoho Deals -> dashboard column mapping ---
+// Mirrors CANON_FIELDS in public/index.html (label + aliases only — the
+// required/calculation logic stays entirely client-side and untouched). Used
+// only to match real Zoho "Deals" module field labels onto the same
+// canonical columns a manual spreadsheet upload already uses, so Zoho data
+// flows through the exact same column-mapping/validation pipeline in the
+// browser as an uploaded file — nothing about that pipeline changes.
+// If a required column doesn't match here, keep this list and the client's
+// CANON_FIELDS aliases in sync rather than special-casing the server route.
+const ZOHO_CANON_FIELDS = {
+  dealName: { label: "Deal Name", aliases: ["dealname"] },
+  recordNumber: { label: "Record Number", aliases: ["recordnumber", "recordno", "recordnum", "record#"] },
+  terminalCount: { label: "Terminal Count", aliases: ["terminalcount", "terminals"] },
+  package: { label: "Package", aliases: ["package", "primarypackage"] },
+  stage: { label: "Stage", aliases: ["stage"] },
+  payStatus: { label: "Pay Status", aliases: ["paystatus"] },
+  payScore: { label: "Pay Score", aliases: ["payscore"] },
+  aditPayVolume: { label: "Adit Pay Volume", aliases: ["aditpayvolume", "payvolume", "aditpayvol"] },
+  payAdoptDate: { label: "Pay Adopt Date", aliases: ["payadoptdate", "adoptdate"] },
+  csm: { label: "CSM", aliases: ["csm"] },
+  csmPod: { label: "CSM Pod", aliases: ["csmpod"] },
+  techOb: { label: "Tech OB", aliases: ["techob"] },
+  agreementSignedDate: { label: "Agreement Signed Date", aliases: ["agreementsigneddate", "signeddate"] },
+};
+
+function normHeaderServer(h) {
+  return String(h == null ? "" : h).trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+// Zoho lookup/user/picklist fields come back as objects or arrays rather than
+// plain values (e.g. a "CSM" lookup is {id, name}). Flatten them to a single
+// display string so they drop into a spreadsheet-style cell unchanged.
+function flattenZohoValue(v) {
+  if (v == null) return null;
+  if (Array.isArray(v)) return v.map(flattenZohoValue).filter(function (x) { return x != null && x !== ""; }).join("; ");
+  if (typeof v === "object") {
+    if (v.name != null) return v.name;
+    if (v.full_name != null) return v.full_name;
+    if (v.display_value != null) return v.display_value;
+    if (v.value != null) return v.value;
+    return null;
+  }
+  return v;
+}
+
+// Builds { headers, rows } — an AOA (header row + data rows) shaped exactly
+// like a parsed spreadsheet — by matching Zoho Deals field labels/api names
+// against ZOHO_CANON_FIELDS, then paging through every Deal record.
+async function fetchZohoDealsAsRows() {
+  const fieldMeta = await zohoApiGet("/crm/v8/settings/fields?module=Deals");
+  const allFields = fieldMeta.fields || [];
+
+  const fieldMap = {}; // canonKey -> api_name
+  Object.keys(ZOHO_CANON_FIELDS).forEach(function (key) {
+    const aliases = ZOHO_CANON_FIELDS[key].aliases;
+    const match = allFields.find(function (f) {
+      return aliases.indexOf(normHeaderServer(f.field_label)) !== -1 || aliases.indexOf(normHeaderServer(f.api_name)) !== -1;
+    });
+    if (match) fieldMap[key] = match.api_name;
+  });
+
+  const matchedKeys = Object.keys(fieldMap);
+  if (!matchedKeys.length) {
+    const err = new Error("No matching fields found in the Zoho Deals module for the analyzer's expected columns.");
+    err.code = "NO_FIELD_MATCH";
+    throw err;
+  }
+
+  const apiNames = matchedKeys.map(function (k) { return fieldMap[k]; });
+  const fieldsParam = encodeURIComponent(apiNames.join(","));
+
+  const rows = [];
+  let page = 1;
+  const perPage = 200;
+  const maxPages = 50; // safety cap (~10,000 deals) against a runaway loop
+  for (;;) {
+    const data = await zohoApiGet("/crm/v8/Deals?fields=" + fieldsParam + "&per_page=" + perPage + "&page=" + page);
+    const records = data.data || [];
+    records.forEach(function (rec) {
+      rows.push(matchedKeys.map(function (k) { return flattenZohoValue(rec[fieldMap[k]]); }));
+    });
+    const more = data.info && data.info.more_records;
+    if (!more || page >= maxPages) break;
+    page += 1;
+  }
+
+  const headers = matchedKeys.map(function (k) { return ZOHO_CANON_FIELDS[k].label; });
+  console.log("[zoho] Deals sync: matched " + matchedKeys.length + "/" + Object.keys(ZOHO_CANON_FIELDS).length + " columns, fetched " + rows.length + " records.");
+  return { headers: headers, rows: rows, matchedColumns: matchedKeys.length };
 }
 
 // --- Shared dataset persistence ---
@@ -209,6 +306,36 @@ app.get("/api/debug/zoho-fields", requireAuth, async (req, res) => {
     res.json({ count: filtered.length, fields: filtered });
   } catch (err) {
     res.status(500).json({ error: String((err && err.message) || err) });
+  }
+});
+
+// Pulls live deal data from Zoho CRM, mapped onto the same canonical columns
+// a manual spreadsheet upload uses (see ZOHO_CANON_FIELDS / fetchZohoDealsAsRows
+// above). Returns { headers, rows } — an AOA the browser feeds through its
+// existing column-mapping and validation pipeline exactly as if it were a
+// parsed spreadsheet. Never returns the Client Secret or Refresh Token, and
+// never a raw access token — only Deals data.
+app.get("/api/zoho/deals", requireAuth, async (req, res) => {
+  try {
+    const result = await fetchZohoDealsAsRows();
+    res.json({
+      headers: result.headers,
+      rows: result.rows,
+      matchedColumns: result.matchedColumns,
+      recordCount: result.rows.length,
+      fetchedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error("[zoho] Deals sync failed:", err.message);
+    if (err && err.code === "NO_FIELD_MATCH") {
+      return res.status(502).json({ error: "Connected to Zoho CRM, but none of its Deals fields match the analyzer's expected columns." });
+    }
+    // Any other failure (missing env vars, a bad/expired refresh token, a
+    // network error talking to Zoho, an unexpected API response) is treated
+    // as an authentication failure for the user's purposes — this is the only
+    // message ever returned here, and it never includes err.message, which is
+    // logged server-side above but never sent to the browser.
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
   }
 });
 
