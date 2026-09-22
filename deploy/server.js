@@ -262,10 +262,23 @@ app.post("/api/dataset", requireAuth, (req, res) => {
 });
 
 app.use(requireAuth);
-app.use(express.static(path.join(__dirname, "public"), { extensions: ["html"] }));
+// Never let browsers cache the HTML pages without revalidating first — the
+// app is a single evolving index.html, and a stale cached copy from before a
+// deploy can briefly show old UI (e.g. an old upload-screen flash) even after
+// the server has been updated. Static assets other than .html keep normal
+// caching; this only forces a fresh check on the page itself.
+app.use(express.static(path.join(__dirname, "public"), {
+  extensions: ["html"],
+  setHeaders: function (res, filePath) {
+    if (filePath.endsWith(".html")) {
+      res.setHeader("Cache-Control", "no-cache");
+    }
+  },
+}));
 
 // Single-page app: any unmatched (authenticated) route falls back to index.html.
 app.get("*", (req, res) => {
+  res.set("Cache-Control", "no-cache");
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
