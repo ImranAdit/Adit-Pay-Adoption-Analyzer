@@ -178,19 +178,26 @@ async function fetchZohoDealsAsRows() {
   const apiNames = matchedKeys.map(function (k) { return fieldMap[k]; });
   const fieldsParam = encodeURIComponent(apiNames.join(","));
 
+  // Zoho's classic "page" (offset) pagination is capped at the first 2000
+  // records ("DISCRETE_PAGINATION_LIMIT_EXCEEDED" past that) — deal counts
+  // routinely exceed that, so this uses cursor-based pagination instead:
+  // no "page" param at all, just follow info.next_page_token until Zoho
+  // says there's nothing left. This has no such record-count ceiling.
   const rows = [];
-  let page = 1;
   const perPage = 200;
-  const maxPages = 50; // safety cap (~10,000 deals) against a runaway loop
-  for (;;) {
-    const data = await zohoApiGet("/crm/v8/Deals?fields=" + fieldsParam + "&per_page=" + perPage + "&page=" + page);
+  const maxPages = 100; // safety cap (~20,000 deals) against a runaway loop
+  let pageToken = null;
+  for (let i = 0; i < maxPages; i++) {
+    let url = "/crm/v8/Deals?fields=" + fieldsParam + "&per_page=" + perPage;
+    if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
+    const data = await zohoApiGet(url);
     const records = data.data || [];
     records.forEach(function (rec) {
       rows.push(matchedKeys.map(function (k) { return flattenZohoValue(rec[fieldMap[k]]); }));
     });
     const more = data.info && data.info.more_records;
-    if (!more || page >= maxPages) break;
-    page += 1;
+    pageToken = data.info && data.info.next_page_token;
+    if (!more || !pageToken) break;
   }
 
   const headers = matchedKeys.map(function (k) { return ZOHO_CANON_FIELDS[k].label; });
