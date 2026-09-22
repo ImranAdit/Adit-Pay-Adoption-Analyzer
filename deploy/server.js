@@ -183,12 +183,25 @@ async function fetchZohoDealsAsRows() {
   // routinely exceed that, so this uses cursor-based pagination instead:
   // no "page" param at all, just follow info.next_page_token until Zoho
   // says there's nothing left. This has no such record-count ceiling.
+  //
+  // The Deals module is the company's entire pipeline (20,000+ records),
+  // not just Adit Pay terminal deals, so the pull is scoped with a Stage
+  // criteria to the stages where a customer could realistically have an
+  // Adit Pay terminal — skipping deals that are lost, churned, or
+  // still pre-sale. This cuts a full sync from ~20,000 records to ~4,500.
+  const STAGE_FILTER = ["Closed Won", "CSM", "Onboarding", "Sign Up", "Getting Started"];
+  const stageCriteria = STAGE_FILTER.reduce(function (expr, stage) {
+    const cond = "(Stage:equals:" + stage + ")";
+    return expr ? "(" + expr + "or" + cond + ")" : cond;
+  }, "");
+  const criteriaParam = encodeURIComponent(stageCriteria);
+
   const rows = [];
   const perPage = 200;
-  const maxPages = 100; // safety cap (~20,000 deals) against a runaway loop
+  const maxPages = 100; // safety cap against a runaway loop
   let pageToken = null;
   for (let i = 0; i < maxPages; i++) {
-    let url = "/crm/v8/Deals?fields=" + fieldsParam + "&per_page=" + perPage;
+    let url = "/crm/v8/Deals?fields=" + fieldsParam + "&per_page=" + perPage + "&criteria=" + criteriaParam;
     if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
     const data = await zohoApiGet(url);
     const records = data.data || [];
