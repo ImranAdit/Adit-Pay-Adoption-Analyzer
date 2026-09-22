@@ -5,6 +5,7 @@
 // has been explicitly granted access before handing over the app itself.
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
@@ -100,9 +101,25 @@ async function zohoApiGet(pathAndQuery) {
   return data;
 }
 
+// --- Shared dataset persistence ---
+// Keeps the last successfully-processed upload on the server so every signed-in
+// user sees the same dashboard on login instead of an empty upload screen.
+// All parsing, validation, and calculations still happen client-side; this
+// only stores the already-processed rows the browser hands it, verbatim, and
+// hands them back unchanged. Stored on local disk — durable across logins and
+// page reloads, but cleared if the server's filesystem is reset (e.g. a
+// redeploy without a persistent volume attached).
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
+const DATASET_FILE = path.join(DATA_DIR, "dataset.json");
+try {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+} catch (err) {
+  console.warn("[dataset] Could not create data directory:", err.message);
+}
+
 // Trust Railway's proxy so secure cookies work correctly behind TLS termination.
 app.set("trust proxy", 1);
-app.use(express.json());
+app.use(express.json({ limit: "25mb" }));
 app.use(cookieParser());
 
 function requireAuth(req, res, next) {
@@ -193,6 +210,55 @@ app.get("/api/debug/zoho-fields", requireAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: String((err && err.message) || err) });
   }
+});
+
+// GET returns the last processed dataset (if any) so the dashboard can load it
+// automatically on sign-in. POST saves a newly-processed upload, replacing
+// whatever was previously stored. Neither route touches the shape of the data
+// — it's stored and returned exactly as the browser already computes it.
+app.get("/api/dataset", requireAuth, (req, res) => {
+  fs.readFile(DATASET_FILE, "utf8", (err, raw) => {
+    if (err) {
+      if (err.code === "ENOENT") return res.json({ exists: false });
+      console.error("[dataset] Failed to read stored dataset:", err.message);
+      return res.status(500).json({ exists: false, error: "Could not read the stored dataset." });
+    }
+    try {
+      const data = JSON.parse(raw);
+      res.json({
+        exists: true,
+        fileName: data.fileName || null,
+        uploadedAt: data.uploadedAt || null,
+        uploadedBy: data.uploadedBy || null,
+        processed: data.processed || [],
+        validation: data.validation || null,
+      });
+    } catch (parseErr) {
+      console.error("[dataset] Stored dataset is corrupt:", parseErr.message);
+      res.status(500).json({ exists: false, error: "Stored dataset is corrupt." });
+    }
+  });
+});
+
+app.post("/api/dataset", requireAuth, (req, res) => {
+  const processed = req.body && req.body.processed;
+  if (!Array.isArray(processed)) {
+    return res.status(400).json({ error: "Expected a 'processed' array of rows." });
+  }
+  const payload = {
+    fileName: (req.body && req.body.fileName) || null,
+    uploadedAt: new Date().toISOString(),
+    uploadedBy: req.user.email,
+    processed: processed,
+    validation: (req.body && req.body.validation) || null,
+  };
+  fs.writeFile(DATASET_FILE, JSON.stringify(payload), "utf8", (err) => {
+    if (err) {
+      console.error("[dataset] Failed to save dataset:", err.message);
+      return res.status(500).json({ error: "Could not save the dataset." });
+    }
+    res.json({ ok: true, uploadedAt: payload.uploadedAt });
+  });
 });
 
 app.use(requireAuth);
