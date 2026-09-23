@@ -429,6 +429,14 @@
         <p class="hint">.xlsx &middot; .xls &middot; .csv</p>
       </div>
 
+      <div style="display:flex; align-items:center; gap:10px; margin:18px 0; color:var(--ink-soft); font-size:13px;">
+        <span style="flex:1; height:1px; background:var(--line);"></span>
+        <span>or</span>
+        <span style="flex:1; height:1px; background:var(--line);"></span>
+      </div>
+
+      <button type="button" class="btn btn-ghost" id="btnLoadZohoInitial" style="width:100%; justify-content:center;" title="Pull deals from Zoho CRM">Load from Zoho CRM</button>
+
       <div class="file-meta" id="fileMeta" hidden></div>
       <div class="sheet-picker" id="sheetPicker" hidden></div>
       <div id="validationPanel" hidden></div>
@@ -729,6 +737,23 @@ document.getElementById("btnSyncZoho").addEventListener("click", function(){
   });
 });
 
+// The topbar's "Sync from Zoho" only exists once a dashboard is already
+// showing, so a signed-in user with no stored dataset yet (e.g. right after
+// a redeploy) previously had no way to load Zoho data at all — only the file
+// upload. This mirrors the same loadFromZoho() call from the initial upload
+// screen itself.
+document.getElementById("btnLoadZohoInitial").addEventListener("click", function(){
+  var btn = document.getElementById("btnLoadZohoInitial");
+  var original = btn.textContent;
+  btn.disabled = true; btn.textContent = "Loading from Zoho…";
+  loadFromZoho({silent:false}).then(function(){
+    btn.disabled = false; btn.textContent = original;
+  }).catch(function(err){
+    btn.disabled = false; btn.textContent = original;
+    alert("Zoho load failed: " + ((err && err.message) || err));
+  });
+});
+
 fetch("/auth/me").then(function(r){ return r.ok ? r.json() : null; }).then(function(me){
   if (!me) return;
   var nameEl = document.getElementById("userName");
@@ -779,15 +804,6 @@ function loadFromZoho(opts){
   });
 }
 
-// On page load, try Zoho CRM first (if configured and its fields map cleanly);
-// if that isn't available yet, fall back to the last dataset stored on the
-// server so every signed-in user still sees a dashboard on login instead of
-// an empty upload screen, exactly as before. Reuses the exact same rendering
-// path a manual upload uses (proceedToDashboard/renderAll), so nothing about
-// how the dashboard is built changes — only how App.processed/App.validation
-// get populated before it runs. The upload screen stays hidden (behind a
-// brief "loading" placeholder) until this check comes back, so it never
-// flashes on screen before disappearing.
 // On page load, load the last dataset stored on the server so every
 // signed-in user sees a dashboard on login instead of an empty upload
 // screen, exactly as before. Reuses the exact same rendering path a manual
