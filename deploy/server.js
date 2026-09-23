@@ -192,6 +192,60 @@ async function resolveAditPayModule() {
   return aditPayModuleCache;
 }
 
+// Pages through every Deal record for the given field selection, following
+// Zoho's cursor-based next_page_token (no record-count ceiling, unlike the
+// classic offset "page" pagination). Split out so it can run concurrently
+// with fetchAditPayById() below instead of after it.
+async function fetchDealsPages(fieldsParam, cvidParam, matchedKeys, fieldMap) {
+  const rows = [];
+  const dealIds = [];
+  const perPage = 200;
+  const maxPages = 100; // safety cap against a runaway loop
+  let pageToken = null;
+  for (let i = 0; i < maxPages; i++) {
+    let url = "/crm/v8/Deals?fields=" + fieldsParam + "&per_page=" + perPage + cvidParam;
+    if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
+    const data = await zohoApiGet(url);
+    const records = data.data || [];
+    records.forEach(function (rec) {
+      rows.push(matchedKeys.map(function (k) { return flattenZohoValue(rec[fieldMap[k]]); }));
+      dealIds.push(rec.id);
+    });
+    const more = data.info && data.info.more_records;
+    pageToken = data.info && data.info.next_page_token;
+    if (!more || !pageToken) break;
+  }
+  return { rows: rows, dealIds: dealIds };
+}
+
+// Pages through every Adit Pay module record, keyed by the Deal id it looks
+// up to, so rows can be joined to it by dealId after both fetches finish.
+// Split out so it can run concurrently with fetchDealsPages() above.
+async function fetchAditPayById(aditPay, aditPayKeys, aditPayFieldMap) {
+  const aditPayApiNames = aditPayKeys.map(function (k) { return aditPayFieldMap[k]; });
+  const joinFieldsParam = encodeURIComponent([aditPay.lookupApiName].concat(aditPayApiNames).join(","));
+  const byDealId = {};
+  const perPage = 200;
+  const maxPages = 100;
+  let apPageToken = null;
+  for (let i = 0; i < maxPages; i++) {
+    let url = "/crm/v8/" + encodeURIComponent(aditPay.apiName) + "?fields=" + joinFieldsParam + "&per_page=" + perPage;
+    if (apPageToken) url += "&page_token=" + encodeURIComponent(apPageToken);
+    const data = await zohoApiGet(url);
+    const records = data.data || [];
+    records.forEach(function (rec) {
+      const lookupVal = rec[aditPay.lookupApiName];
+      const dealId = lookupVal && typeof lookupVal === "object" ? lookupVal.id : lookupVal;
+      if (!dealId) return;
+      byDealId[dealId] = aditPayKeys.map(function (k) { return flattenZohoValue(rec[aditPayFieldMap[k]]); });
+    });
+    const more = data.info && data.info.more_records;
+    apPageToken = data.info && data.info.next_page_token;
+    if (!more || !apPageToken) break;
+  }
+  return byDealId;
+}
+
 // Builds { headers, rows } — an AOA (header row + data rows) shaped exactly
 // like a parsed spreadsheet — by matching Zoho field labels/api names against
 // ZOHO_CANON_FIELDS, then paging through every Deal record.
@@ -206,6 +260,12 @@ async function resolveAditPayModule() {
 // field back to Deals can't be found, those columns are left out of the
 // output entirely (not faked with blank values) so the client's existing
 // "missing required columns" screen reports them accurately.
+//
+// The Deals pagination and the Adit Pay pagination are independent of one
+// another, so they run concurrently via Promise.all() rather than one after
+// the other — this roughly halves total sync time whenever both are needed,
+// which matters most while ZOHO_DEALS_CVID is left unconfigured and the
+// Deals pull covers the company's full, unfiltered pipeline.
 async function fetchZohoDealsAsRows() {
   const fieldMeta = await zohoApiGet("/crm/v8/settings/fields?module=Deals");
   const allFields = fieldMeta.fields || [];
@@ -275,47 +335,16 @@ async function fetchZohoDealsAsRows() {
   // (ZOHO_DEALS_CVID). Without one configured, this pulls the full module.
   const cvidParam = ZOHO_DEALS_CVID ? "&cvid=" + encodeURIComponent(ZOHO_DEALS_CVID) : "";
 
-  const rows = [];
-  const dealIds = [];
-  const perPage = 200;
-  const maxPages = 100; // safety cap against a runaway loop
-  let pageToken = null;
-  for (let i = 0; i < maxPages; i++) {
-    let url = "/crm/v8/Deals?fields=" + fieldsParam + "&per_page=" + perPage + cvidParam;
-    if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
-    const data = await zohoApiGet(url);
-    const records = data.data || [];
-    records.forEach(function (rec) {
-      rows.push(matchedKeys.map(function (k) { return flattenZohoValue(rec[fieldMap[k]]); }));
-      dealIds.push(rec.id);
-    });
-    const more = data.info && data.info.more_records;
-    pageToken = data.info && data.info.next_page_token;
-    if (!more || !pageToken) break;
-  }
+  const dealsPromise = fetchDealsPages(fieldsParam, cvidParam, matchedKeys, fieldMap);
+  const aditPayPromise = aditPayKeys.length
+    ? fetchAditPayById(aditPay, aditPayKeys, aditPayFieldMap)
+    : Promise.resolve(null);
 
-  if (aditPayKeys.length) {
-    // aditPayKeys is only ever non-empty when aditPay.found && aditPay.lookupApiName
-    // (see above), so a reliable join is always possible here.
-    const aditPayApiNames = aditPayKeys.map(function (k) { return aditPayFieldMap[k]; });
-    const joinFieldsParam = encodeURIComponent([aditPay.lookupApiName].concat(aditPayApiNames).join(","));
-    const byDealId = {};
-    let apPageToken = null;
-    for (let i = 0; i < maxPages; i++) {
-      let url = "/crm/v8/" + encodeURIComponent(aditPay.apiName) + "?fields=" + joinFieldsParam + "&per_page=" + perPage;
-      if (apPageToken) url += "&page_token=" + encodeURIComponent(apPageToken);
-      const data = await zohoApiGet(url);
-      const records = data.data || [];
-      records.forEach(function (rec) {
-        const lookupVal = rec[aditPay.lookupApiName];
-        const dealId = lookupVal && typeof lookupVal === "object" ? lookupVal.id : lookupVal;
-        if (!dealId) return;
-        byDealId[dealId] = aditPayKeys.map(function (k) { return flattenZohoValue(rec[aditPayFieldMap[k]]); });
-      });
-      const more = data.info && data.info.more_records;
-      apPageToken = data.info && data.info.next_page_token;
-      if (!more || !apPageToken) break;
-    }
+  const [dealsResult, byDealId] = await Promise.all([dealsPromise, aditPayPromise]);
+  const rows = dealsResult.rows;
+  const dealIds = dealsResult.dealIds;
+
+  if (byDealId) {
     // A deal without a matching Adit Pay record (e.g. not yet processed) gets
     // null cells for these columns — the row still comes through with every
     // other column intact, rather than being dropped.
@@ -334,7 +363,6 @@ async function fetchZohoDealsAsRows() {
   );
   return { headers: headers, rows: rows, matchedColumns: finalKeys.length };
 }
-
 // --- Shared dataset persistence ---
 // Keeps the last successfully-processed upload on the server so every signed-in
 // user sees the same dashboard on login instead of an empty upload screen.
