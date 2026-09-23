@@ -196,9 +196,78 @@ async function resolveAditPayModule() {
 // Zoho's cursor-based next_page_token (no record-count ceiling, unlike the
 // classic offset "page" pagination). Split out so it can run concurrently
 // with fetchAditPayById() below instead of after it.
-async function fetchDealsPages(fieldsParam, cvidParam, matchedKeys, fieldMap) {
+// --- Business-rule scope filter -------------------------------------------
+// The Deals module is the company's entire pipeline (~20,000 records: every
+// lead, prospect, and deal ever created), not just deals that actually
+// purchased Adit Pay terminals. The business already has a Zoho report
+// ("All Deals which purchased Terminals") that scopes this down correctly
+// (~770 records as of writing); this replicates that report's own Advanced
+// Filter exactly so the dashboard always matches it, live, on every sync.
+//
+// Criteria pattern from the report: ((((( 1 and 2 ) and 3 ) and 4 ) or 5 )
+// and 6 ) and 7 ):
+//   1. Terminals Selected is Yes
+//   2. Deal Name doesn't contain "test"
+//   3. Stage is one of: Get Started, Closed Won, Onboarding, CSM
+//   4. Agreement Signed Date within the previous 108 months
+//   5. OR: Agreement Signed Date is in the current month
+//   6. Terminal Count >= 1
+//   7. Stage isn't Closed Lost
+//
+// Conditions 4/5 are relative to "now", so this is re-evaluated fresh on
+// every sync rather than being a fixed snapshot — the qualifying set will
+// drift over time exactly as the Zoho report's own results do.
+const SCOPE_FILTER_FIELDS = {
+  terminalsSelected: "Terminals_Selected",
+  dealName: "Deal_Name",
+  stage: "Stage",
+  agreementSignedDate: "Agreement_Signed_Date",
+  terminalCount: "Terminal_Count",
+};
+const SCOPE_STAGE_ALLOWLIST = ["Get Started", "Closed Won", "Onboarding", "CSM"];
+
+function dealMatchesTerminalPurchaseScope(f, now) {
+  const terminalsSelected = f.terminalsSelected;
+  const dealName = f.dealName;
+  const stage = f.stage;
+  const agreementSignedDate = f.agreementSignedDate;
+  const terminalCount = f.terminalCount;
+
+  const cond1 = terminalsSelected === "Yes";
+  const cond2 = !(dealName && String(dealName).toLowerCase().indexOf("test") !== -1);
+  const cond3 = SCOPE_STAGE_ALLOWLIST.indexOf(stage) !== -1;
+
+  const cond4 = (function () {
+    if (!agreementSignedDate) return false;
+    const d = new Date(agreementSignedDate);
+    if (isNaN(d.getTime())) return false;
+    const cutoff = new Date(now);
+    cutoff.setUTCMonth(cutoff.getUTCMonth() - 108);
+    return d >= cutoff && d <= now;
+  })();
+
+  const cond5 = (function () {
+    if (!agreementSignedDate) return false;
+    const d = new Date(agreementSignedDate);
+    if (isNaN(d.getTime())) return false;
+    return d.getUTCFullYear() === now.getUTCFullYear() && d.getUTCMonth() === now.getUTCMonth();
+  })();
+
+  const groupA = cond1 && cond2 && cond3 && cond4;
+  const cond6 = terminalCount != null && Number(terminalCount) >= 1;
+  const cond7 = stage !== "Closed Lost";
+
+  return (groupA || cond5) && cond6 && cond7;
+}
+
+async function fetchDealsPages(fieldsParam, cvidParam, matchedKeys, fieldMap, scopeFieldMap) {
   const rows = [];
   const dealIds = [];
+  // Raw values (per the same field set as SCOPE_FILTER_FIELDS) for every
+  // fetched deal, aligned by index with rows/dealIds — used only to decide
+  // which deals pass dealMatchesTerminalPurchaseScope, never shown to the
+  // client.
+  const scopeRows = [];
   const perPage = 200;
   const maxPages = 100; // safety cap against a runaway loop
   let pageToken = null;
@@ -210,12 +279,15 @@ async function fetchDealsPages(fieldsParam, cvidParam, matchedKeys, fieldMap) {
     records.forEach(function (rec) {
       rows.push(matchedKeys.map(function (k) { return flattenZohoValue(rec[fieldMap[k]]); }));
       dealIds.push(rec.id);
+      const scopeRow = {};
+      Object.keys(scopeFieldMap).forEach(function (k) { scopeRow[k] = flattenZohoValue(rec[scopeFieldMap[k]]); });
+      scopeRows.push(scopeRow);
     });
     const more = data.info && data.info.more_records;
     pageToken = data.info && data.info.next_page_token;
     if (!more || !pageToken) break;
   }
-  return { rows: rows, dealIds: dealIds };
+  return { rows: rows, dealIds: dealIds, scopeRows: scopeRows };
 }
 
 // Pages through every Adit Pay module record, keyed by the Deal id it looks
@@ -319,6 +391,14 @@ async function fetchZohoDealsAsRows() {
   }
 
   const apiNames = matchedKeys.map(function (k) { return fieldMap[k]; });
+  // Also fetch whatever the business-rule scope filter needs (see
+  // dealMatchesTerminalPurchaseScope above), even for fields that aren't
+  // part of the dashboard's own canonical columns, so every Deal can be
+  // evaluated against it regardless of which canonical columns matched.
+  Object.keys(SCOPE_FILTER_FIELDS).forEach(function (k) {
+    const name = SCOPE_FILTER_FIELDS[k];
+    if (apiNames.indexOf(name) === -1) apiNames.push(name);
+  });
   const fieldsParam = encodeURIComponent(apiNames.join(","));
 
   // Zoho's classic "page" (offset) pagination is capped at the first 2000
@@ -335,7 +415,7 @@ async function fetchZohoDealsAsRows() {
   // (ZOHO_DEALS_CVID). Without one configured, this pulls the full module.
   const cvidParam = ZOHO_DEALS_CVID ? "&cvid=" + encodeURIComponent(ZOHO_DEALS_CVID) : "";
 
-  const dealsPromise = fetchDealsPages(fieldsParam, cvidParam, matchedKeys, fieldMap);
+  const dealsPromise = fetchDealsPages(fieldsParam, cvidParam, matchedKeys, fieldMap, SCOPE_FILTER_FIELDS);
   // A failure fetching the Adit Pay module's own records (e.g. an OAuth scope
   // mismatch specific to that module, distinct from the scopes Deals needs)
   // must not sink the whole sync — the Deals data can still be perfectly
@@ -350,8 +430,22 @@ async function fetchZohoDealsAsRows() {
     : Promise.resolve(null);
 
   const [dealsResult, byDealId] = await Promise.all([dealsPromise, aditPayPromise]);
-  const rows = dealsResult.rows;
-  const dealIds = dealsResult.dealIds;
+  let rows = dealsResult.rows;
+  let dealIds = dealsResult.dealIds;
+
+  // Scope every fetched Deal down to Adit's own "All Deals which purchased
+  // Terminals" report criteria (see dealMatchesTerminalPurchaseScope above)
+  // before anything else runs, so every downstream count — including this
+  // function's own log line below — reflects that same ~770-record scope
+  // rather than the whole company pipeline.
+  const scopeNow = new Date();
+  const scopedIdx = [];
+  dealsResult.scopeRows.forEach(function (f, idx) {
+    if (dealMatchesTerminalPurchaseScope(f, scopeNow)) scopedIdx.push(idx);
+  });
+  const rawFetchedCount = rows.length;
+  rows = scopedIdx.map(function (idx) { return rows[idx]; });
+  dealIds = scopedIdx.map(function (idx) { return dealIds[idx]; });
 
   // aditPayKeys may be non-empty even when byDealId is null (the fetch above
   // failed and was caught) — joinedKeys is what actually made it into rows.
@@ -370,8 +464,9 @@ async function fetchZohoDealsAsRows() {
   const headers = finalKeys.map(function (k) { return ZOHO_CANON_FIELDS[k].label; });
   console.log(
     "[zoho] Deals sync: matched " + finalKeys.length + "/" + Object.keys(ZOHO_CANON_FIELDS).length +
-    " columns (" + matchedKeys.length + " on Deals, " + joinedKeys.length + " on Adit Pay), fetched " +
-    rows.length + " records" + (ZOHO_DEALS_CVID ? " (custom view applied)." : " (no custom view configured — full Deals pull).")
+    " columns (" + matchedKeys.length + " on Deals, " + joinedKeys.length + " on Adit Pay); " +
+    rawFetchedCount + " Deals fetched" + (ZOHO_DEALS_CVID ? " (custom view applied)" : " (no custom view configured — full Deals pull)") +
+    ", " + rows.length + " match the terminal-purchase report scope."
   );
   return { headers: headers, rows: rows, matchedColumns: finalKeys.length };
 }
