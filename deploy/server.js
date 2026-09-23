@@ -676,6 +676,34 @@ app.get("/api/zoho/sync-debug", requireAuth, async (req, res) => {
   }
 });
 
+// Diagnostic/debugging helper: lists every field on the Deals module (label,
+// api_name, data_type, and picklist values where applicable). Used to find
+// the exact API names for fields referenced in a business-defined Zoho
+// report/filter (e.g. "Terminals Selected", "Agreement Signed Date") so
+// that filter can be replicated exactly via a COQL query. Read-only; never
+// returns credentials.
+app.get("/api/zoho/fields-debug", requireAuth, async (req, res) => {
+  try {
+    const fieldMeta = await zohoApiGet("/crm/v8/settings/fields?module=Deals");
+    const allFields = fieldMeta.fields || [];
+    res.json({
+      count: allFields.length,
+      fields: allFields.map(function (f) {
+        return {
+          api_name: f.api_name,
+          field_label: f.field_label,
+          data_type: f.data_type,
+          json_type: f.json_type,
+          pick_list_values: f.pick_list_values ? f.pick_list_values.map(function (p) { return p.actual_value || p.display_value; }) : undefined,
+        };
+      }),
+    });
+  } catch (err) {
+    console.error("[zoho] fields-debug failed:", err.message);
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
+  }
+});
+
 // GET returns the last processed dataset (if any) so the dashboard can load it
 // automatically on sign-in. POST saves a newly-processed upload, replacing
 // whatever was previously stored. Neither route touches the shape of the data
