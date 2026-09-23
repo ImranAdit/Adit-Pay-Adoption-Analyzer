@@ -778,6 +778,27 @@ app.get("/api/zoho/deal-field-finder", requireAuth, async (req, res) => {
 // Deal behind a known ground-truth Record Number ("AS - 6244"), then scans
 // every field on that Deal for whichever one holds that exact text. Read-only;
 // never returns credentials.
+// Temporary diagnostic: lists every lookup-type field defined on the Deals
+// module (metadata only, no per-record fetch), to spot a companion module
+// (like Adit_Pay -> "AP - ####" or Tech_OB -> "TO - ####") whose own
+// auto-number Name field might be the true source of "AS - ####" Record
+// Numbers. Read-only; never returns credentials.
+app.get("/api/zoho/deals-lookup-fields", requireAuth, async (req, res) => {
+  try {
+    const fieldMeta = await zohoApiGet("/crm/v8/settings/fields?module=Deals");
+    const allFields = fieldMeta.fields || [];
+    const lookups = allFields
+      .filter(function (f) { return f.lookup && f.lookup.module; })
+      .map(function (f) {
+        return { api_name: f.api_name, field_label: f.field_label, lookup_module: f.lookup.module.api_name };
+      });
+    res.json({ totalFields: allFields.length, lookupFields: lookups });
+  } catch (err) {
+    console.error("[zoho] deals-lookup-fields failed:", err.message);
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
+  }
+});
+
 app.get("/api/zoho/deal-search-sample", requireAuth, async (req, res) => {
   try {
     const probe = "AS - 6244";
