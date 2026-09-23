@@ -806,107 +806,129 @@ app.get("/api/zoho/fields-debug", requireAuth, async (req, res) => {
 // raw scope field values plus a per-condition true/false breakdown. Used to
 // pinpoint exactly which condition diverges from the real report's
 // criteria. Read-only; never returns credentials.
+const DEFAULT_AUDIT_RECORD_NUMBERS = ["AS - 6244", "AS - 6268", "AS - 6218", "AS - 6232", "AS - 6215", "AS - 6216", "AS - 6265", "AS - 6242", "AS - 6254", "AS - 6195", "AS - 6155", "AS - 6143", "AS - 6159", "AS - 6121", "AS - 6178", "AS - 6184", "AS - 6125", "AS - 6160", "AS - 6181", "AS - 6207", "AS - 6241", "AS - 6153", "AS - 6137", "AS - 6131", "AS - 6118", "AS - 6110", "AS - 6109", "AS - 6023", "AS - 6027", "AS - 6039", "AS - 6036", "AS - 6140", "AS - 6013", "AS - 6078", "AS - 5932", "AS - 6095", "AS - 5968", "AS - 5919", "AS - 5921", "AS - 6107", "AS - 5892", "AS - 5894", "AS - 5893", "AS - 5886", "AS - 6217", "AS - 5838", "AS - 5929", "AS - 5934", "AS - 5920", "AS - 5966", "AS - 5794", "AS - 5969", "AS - 5890", "AS - 5816", "AS - 5780", "AS - 5784", "AS - 5959", "AS - 5783", "AS - 5802", "AS - 5821", "AS - 5778", "AS - 5830", "AS - 5800", "AS - 6163", "AS - 5779", "AS - 5723", "AS - 5706", "AS - 5705", "AS - 5693", "AS - 5763", "AS - 5795", "AS - 5695", "AS - 6222", "AS - 5759", "AS - 5765", "AS - 5803", "AS - 5654", "AS - 5696", "AS - 6055", "AS - 5643", "AS - 5688", "AS - 5662", "AS - 5868", "AS - 5729", "AS - 5773", "AS - 5713", "AS - 5837", "AS - 6113", "AS - 5656", "AS - 5608", "AS - 5591", "AS - 5634", "AS - 5593", "AS - 5671", "AS - 5711", "AS - 5621", "AS - 5585", "AS - 5592", "AS - 5632", "AS - 5582", "AS - 5566", "AS - 5556", "AS - 5704", "AS - 5554", "AS - 5895", "AS - 5612", "AS - 5858", "AS - 5573", "AS - 5805", "AS - 5581", "AS - 5570", "AS - 5610", "AS - 5531", "AS - 5576", "AS - 5511", "AS - 5510", "AS - 5508", "AS - 5506", "AS - 5505", "AS - 5498", "AS - 5532", "AS - 5530", "AS - 5480", "AS - 5535", "AS - 5602", "AS - 5528", "AS - 5489", "AS - 5459", "AS - 5474", "AS - 5449", "AS - 5546", "AS - 5454", "AS - 5439", "AS - 5442", "AS - 5462", "AS - 5437", "AS - 5468", "AS - 5440", "AS - 5422", "AS - 5540", "AS - 5408", "AS - 5622", "AS - 5661", "AS - 5383", "AS - 5586", "AS - 5429", "AS - 5417", "AS - 5453", "AS - 5562", "AS - 5358", "AS - 5560", "AS - 5569", "AS - 5401", "AS - 5369", "AS - 5315", "AS - 5568", "AS - 5341", "AS - 5479", "AS - 5658", "AS - 5309", "AS - 5434", "AS - 5318", "AS - 5321", "AS - 5310", "AS - 5311", "AS - 5302", "AS - 5278", "AS - 5280", "AS - 6183", "AS - 5357", "AS - 5229", "AS - 5202", "AS - 5204", "AS - 5203", "AS - 5200", "AS - 5195", "AS - 5210", "AS - 5397", "AS - 5409", "AS - 5223", "AS - 5274", "AS - 5174", "AS - 5299", "AS - 5153", "AS - 5269", "AS - 5213", "AS - 5201", "AS - 5137", "AS - 5136", "AS - 5219", "AS - 5275", "AS - 5129", "AS - 5108", "AS - 5154", "AS - 5156", "AS - 5122", "AS - 5138", "AS - 5132", "AS - 5080", "AS - 5110", "AS - 5598", "AS - 5116", "AS - 5016", "AS - 5012", "AS - 5014", "AS - 5024", "AS - 5099", "AS - 5061", "AS - 5962", "AS - 5060", "AS - 5177", "AS - 4976", "AS - 5068", "AS - 4978", "AS - 5036", "AS - 5563", "AS - 5011", "AS - 5450", "AS - 5073", "AS - 4920", "AS - 5055", "AS - 5070", "AS - 5020", "AS - 5008", "AS - 4882", "AS - 4881", "AS - 4880", "AS - 4879", "AS - 5699", "AS - 4871", "AS - 4902", "AS - 6033", "AS - 5077", "AS - 5792", "AS - 5697", "AS - 4838", "AS - 4878", "AS - 5512", "AS - 5749", "AS - 4864", "AS - 4839", "AS - 5973", "AS - 4792", "AS - 4894", "AS - 4857", "AS - 4810", "AS - 4824", "AS - 5231", "AS - 4822", "AS - 4781", "AS - 4816", "AS - 4761", "AS - 4777", "AS - 4760", "AS - 4758", "AS - 4790", "AS - 5041", "AS - 4778", "AS - 4711", "AS - 4756", "AS - 4783", "AS - 4938", "AS - 4634", "AS - 4748", "AS - 4659", "AS - 4650", "AS - 5366", "AS - 4696", "AS - 4730", "AS - 4621", "AS - 5249", "AS - 4678", "AS - 5312", "AS - 4660", "AS - 4677", "AS - 4729", "AS - 4856", "AS - 4752", "AS - 4563", "AS - 4545", "AS - 4535", "AS - 4570", "AS - 4577", "AS - 4541", "AS - 4522", "AS - 4693", "AS - 4732", "AS - 4890", "AS - 4544", "AS - 4503", "AS - 4504", "AS - 4493", "AS - 5013", "AS - 4514", "AS - 4903", "AS - 4494", "AS - 4576", "AS - 4685", "AS - 4498", "AS - 4589", "AS - 4465", "AS - 4385", "AS - 4492", "AS - 4413", "AS - 4382", "AS - 4395", "AS - 4422", "AS - 4263", "AS - 4560", "AS - 4278", "AS - 4529", "AS - 5564", "AS - 4473", "AS - 5042", "AS - 4262", "AS - 4446", "AS - 4228", "AS - 4251", "AS - 4237", "AS - 4246", "AS - 4291", "AS - 4751", "AS - 4909", "AS - 4571", "AS - 4294", "AS - 4174", "AS - 4513", "AS - 4626", "AS - 4363", "AS - 4362", "AS - 4323", "AS - 4159", "AS - 4332", "AS - 5152", "AS - 4316", "AS - 4343", "AS - 4230", "AS - 5601", "AS - 4095", "AS - 4094", "AS - 4091", "AS - 4098", "AS - 4186", "AS - 4356", "AS - 4837", "AS - 4070", "AS - 4311", "AS - 4309", "AS - 4066", "AS - 4085", "AS - 4061", "AS - 4038", "AS - 4049", "AS - 6262", "AS - 4031", "AS - 4080", "AS - 4055", "AS - 4184", "AS - 4069", "AS - 4113", "AS - 4041", "AS - 4097", "AS - 4122", "AS - 3987", "AS - 4342", "AS - 4361", "AS - 5131", "AS - 4074", "AS - 3978", "AS - 3999", "AS - 3911", "AS - 4357", "AS - 4004", "AS - 4060", "AS - 3879", "AS - 4261", "AS - 3874", "AS - 5599", "AS - 4089", "AS - 3851", "AS - 4312", "AS - 4048", "AS - 4572", "AS - 3927", "AS - 3938", "AS - 3769", "AS - 4279", "AS - 3889", "AS - 4054", "AS - 3925", "AS - 3734", "AS - 3759", "AS - 3744", "AS - 6019", "AS - 3739", "AS - 3699", "AS - 3626", "AS - 6114", "AS - 3692", "AS - 3832", "AS - 3724", "AS - 3698", "AS - 3654", "AS - 3689", "AS - 3623", "AS - 3591", "AS - 3644", "AS - 3592", "AS - 3613", "AS - 3607", "AS - 3831", "AS - 3826", "AS - 3787", "AS - 3638", "AS - 3598", "AS - 3581", "AS - 3536", "AS - 3534", "AS - 3970", "AS - 3653", "AS - 3950", "AS - 3671", "AS - 3605", "AS - 3604", "AS - 4968", "AS - 3537", "AS - 3502", "AS - 3503", "AS - 3586", "AS - 3584", "AS - 3489", "AS - 3508", "AS - 3551", "AS - 3540", "AS - 3676", "AS - 4762", "AS - 3494", "AS - 3995", "AS - 3667", "AS - 3451", "AS - 3575", "AS - 4152", "AS - 3480", "AS - 4916", "AS - 3405", "AS - 3567", "AS - 3398", "AS - 3402", "AS - 3531", "AS - 4471", "AS - 3464", "AS - 3903", "AS - 3585", "AS - 3516", "AS - 3541", "AS - 3331", "AS - 3391", "AS - 3507", "AS - 3378", "AS - 3362", "AS - 3325", "AS - 3411", "AS - 3563", "AS - 3360", "AS - 3353", "AS - 3245", "AS - 3257", "AS - 3407", "AS - 3277", "AS - 3219", "AS - 5727", "AS - 3152", "AS - 3151", "AS - 4409", "AS - 3116", "AS - 3315", "AS - 3574", "AS - 3155", "AS - 4283", "AS - 3318", "AS - 4110", "AS - 3197", "AS - 3130", "AS - 3303", "AS - 3082", "AS - 3252", "AS - 3156", "AS - 3454", "AS - 3072", "AS - 3207", "AS - 3481", "AS - 3147", "AS - 3183", "AS - 3027", "AS - 4383", "AS - 3311", "AS - 3333", "AS - 3108", "AS - 3107", "AS - 3500", "AS - 2995", "AS - 2997", "AS - 2996", "AS - 2993", "AS - 2994", "AS - 3118", "AS - 2953", "AS - 2978", "AS - 2979", "AS - 2936", "AS - 2912", "AS - 2974", "AS - 2893", "AS - 2939", "AS - 2888", "AS - 2924", "AS - 2868", "AS - 2798", "AS - 2825", "AS - 3091", "AS - 5139", "AS - 2805", "AS - 2802", "AS - 2747", "AS - 2750", "AS - 2745", "AS - 2721", "AS - 2787", "AS - 2734", "AS - 2890", "AS - 2735", "AS - 2783", "AS - 2785", "AS - 2689", "AS - 2742", "AS - 2649", "AS - 3498", "AS - 2665", "AS - 3035", "AS - 2659", "AS - 2658", "AS - 5631", "AS - 2835", "AS - 2640", "AS - 2632", "AS - 2592", "AS - 5382", "AS - 2616", "AS - 4555", "AS - 2587", "AS - 3334", "AS - 2536", "AS - 2547", "AS - 2591", "AS - 3014", "AS - 3226", "AS - 2743", "AS - 4116", "AS - 3140", "AS - 2496", "AS - 2560", "AS - 3113", "AS - 2475", "AS - 2772", "AS - 2415", "AS - 2540", "AS - 2394", "AS - 2410", "AS - 2423", "AS - 2340", "AS - 2364", "AS - 2341", "AS - 2347", "AS - 2614", "AS - 2268", "AS - 2354", "AS - 2317", "AS - 2232", "AS - 3099", "AS - 2331", "AS - 2247", "AS - 2228", "AS - 2286", "AS - 2259", "AS - 2274", "AS - 2203", "AS - 4599", "AS - 2222", "AS - 2349", "AS - 2193", "AS - 2148", "AS - 2144", "AS - 2251", "AS - 2231", "AS - 2137", "AS - 2166", "AS - 2143", "AS - 2160", "AS - 2119", "AS - 2134", "AS - 2128", "AS - 2216", "AS - 2099", "AS - 2102", "AS - 2687", "AS - 2076", "AS - 2081", "AS - 5081", "AS - 2035", "AS - 2038", "AS - 3522", "AS - 2024", "AS - 5082", "AS - 2046", "AS - 2057", "AS - 2004", "AS - 2047", "AS - 3258", "AS - 2114", "AS - 2025", "AS - 1957", "AS - 1935", "AS - 1940", "AS - 2537", "AS - 1919", "AS - 1937", "AS - 1987", "AS - 1923", "AS - 3088", "AS - 2233", "AS - 1872", "AS - 1898", "AS - 1865", "AS - 1904", "AS - 1838", "AS - 1825", "AS - 1909", "AS - 1832", "AS - 5567", "AS - 1821", "AS - 1817", "AS - 1809", "AS - 1816", "AS - 5271", "AS - 1803", "AS - 1804", "AS - 1805", "AS - 1806", "AS - 1781", "AS - 1772", "AS - 1767", "AS - 1770", "AS - 1746", "AS - 1741", "AS - 1765", "AS - 1700", "AS - 1735", "AS - 1697", "AS - 2332", "AS - 1724", "AS - 1657", "AS - 1656", "AS - 1663", "AS - 1879", "AS - 1579", "AS - 1564", "AS - 1557", "AS - 1552", "AS - 1630", "AS - 1539", "AS - 1684", "AS - 1591", "AS - 1507", "AS - 1459", "AS - 1458", "AS - 2483", "AS - 1623", "AS - 1463", "AS - 1561", "AS - 358", "AS - 1671", "AS - 392", "AS - 416", "AS - 4578", "AS - 386", "AS - 2989", "AS - 5142", "AS - 2297", "AS - 330", "AS - 258", "AS - 393", "AS - 492", "AS - 259", "AS - 460", "AS - 1515", "AS - 281", "AS - 318", "AS - 250", "AS - 263", "AS - 279", "AS - 350", "AS - 341", "AS - 464", "AS - 234", "AS - 213", "AS - 200", "AS - 231", "AS - 1622", "AS - 173", "AS - 3141", "AS - 4601", "AS - 245", "AS - 329", "AS - 138", "AS - 088", "AS - 133", "AS - 101", "AS - 480", "AS - 153", "AS - 1936", "AS - 071", "AS - 4364", "AS - 1441", "AS - 028", "AS - 1807", "AS - 4457", "AS - 030", "AS - 034", "AS - 004", "AS - 085", "AS - 166", "AS - 049", "AS - 696", "AS - 631", "AS - 715", "AS - 671", "AS - 703", "AS - 598", "AS - 741", "AS - 730", "AS - 551", "AS - 579", "AS - 643", "AS - 766", "AS - 5413", "AS - 549", "AS - 1979", "AS - 869", "AS - 832", "AS - 594", "AS - 1875", "AS - 890", "AS - 954", "AS - 527", "AS - 1140", "AS - 1055", "AS - 1030", "AS - 1292", "AS - 513", "AS - 1022", "AS - 3299", "AS - 1101", "AS - 531", "AS - 1409", "AS - 5730", "AS - 1183", "AS - 1260", "AS - 5653", "AS - 948", "AS - 5022"];
+
+// Shared audit logic used by both the POST (custom list) and GET (embedded
+// ground-truth list) routes below. Read-only; never returns credentials.
+async function computeScopeAudit(recordNumbers) {
+  const wanted = new Set(recordNumbers.map(String));
+
+  const aditPay = await resolveAditPayModule();
+  if (!aditPay.found || !aditPay.lookupApiName) {
+    throw new Error("Could not resolve the Adit Pay module.");
+  }
+
+  const dealIdByRecordNumber = {};
+  {
+    const fields = encodeURIComponent(["Name", aditPay.lookupApiName].join(","));
+    let pageToken = null;
+    for (let i = 0; i < 100; i++) {
+      let url = "/crm/v8/" + encodeURIComponent(aditPay.apiName) + "?fields=" + fields + "&per_page=200";
+      if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
+      const data = await zohoApiGet(url);
+      const records = data.data || [];
+      records.forEach(function (rec) {
+        const name = rec.Name;
+        if (name != null && wanted.has(String(name))) {
+          const lookupVal = rec[aditPay.lookupApiName];
+          const dealId = lookupVal && typeof lookupVal === "object" ? lookupVal.id : lookupVal;
+          if (dealId) dealIdByRecordNumber[String(name)] = dealId;
+        }
+      });
+      const more = data.info && data.info.more_records;
+      pageToken = data.info && data.info.next_page_token;
+      if (!more || !pageToken) break;
+    }
+  }
+
+  const scopeByDealId = {};
+  {
+    const neededIds = new Set(Object.values(dealIdByRecordNumber));
+    const fields = encodeURIComponent(["id"].concat(Object.values(SCOPE_FILTER_FIELDS)).join(","));
+    let pageToken = null;
+    for (let i = 0; i < 100; i++) {
+      let url = "/crm/v8/Deals?fields=" + fields + "&per_page=200";
+      if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
+      const data = await zohoApiGet(url);
+      const records = data.data || [];
+      records.forEach(function (rec) {
+        if (neededIds.has(rec.id)) {
+          const f = {};
+          Object.keys(SCOPE_FILTER_FIELDS).forEach(function (k) { f[k] = flattenZohoValue(rec[SCOPE_FILTER_FIELDS[k]]); });
+          scopeByDealId[rec.id] = f;
+        }
+      });
+      const more = data.info && data.info.more_records;
+      pageToken = data.info && data.info.next_page_token;
+      if (!more || !pageToken) break;
+    }
+  }
+
+  const now = new Date();
+  const results = [];
+  let matched = 0, rejected = 0, noDealFound = 0;
+  recordNumbers.forEach(function (rn) {
+    const dealId = dealIdByRecordNumber[String(rn)];
+    if (!dealId) { noDealFound++; results.push({ recordNumber: rn, error: "no matching Deal found via Adit Pay lookup" }); return; }
+    const f = scopeByDealId[dealId];
+    if (!f) { noDealFound++; results.push({ recordNumber: rn, dealId: dealId, error: "deal id not found in Deals fetch" }); return; }
+    const passes = dealMatchesTerminalPurchaseScope(f, now);
+    if (passes) { matched++; return; }
+    rejected++;
+    const cond1 = f.terminalsSelected === "Yes";
+    const cond2 = !(f.dealName && String(f.dealName).toLowerCase().indexOf("test") !== -1);
+    const cond3 = SCOPE_STAGE_ALLOWLIST.indexOf(f.stage) !== -1;
+    let cond4 = false, cond5 = false;
+    if (f.agreementSignedDate) {
+      const d = new Date(f.agreementSignedDate);
+      if (!isNaN(d.getTime())) {
+        const cutoff = new Date(now);
+        cutoff.setUTCMonth(cutoff.getUTCMonth() - 108);
+        cond4 = d >= cutoff && d <= now;
+        cond5 = d.getUTCFullYear() === now.getUTCFullYear() && d.getUTCMonth() === now.getUTCMonth();
+      }
+    }
+    const cond6 = f.terminalCount != null && Number(f.terminalCount) >= 1;
+    const cond7 = f.stage !== "Closed Lost";
+    results.push({
+      recordNumber: rn, dealId: dealId, raw: f,
+      conditions: { cond1_terminalsSelectedYes: cond1, cond2_nameNoTest: cond2, cond3_stageAllowed: cond3, cond4_within108mo: cond4, cond5_currentMonth: cond5, cond6_terminalCountGte1: cond6, cond7_notClosedLost: cond7 },
+    });
+  });
+
+  return {
+    totalRequested: recordNumbers.length,
+    matched: matched,
+    rejected: rejected,
+    noDealFound: noDealFound,
+    rejectedSample: results.filter(function (r) { return r.conditions; }),
+    notFoundSample: results.filter(function (r) { return r.error; }).slice(0, 10),
+  };
+}
+
 app.post("/api/zoho/scope-audit", requireAuth, async (req, res) => {
   try {
     const recordNumbers = (req.body && req.body.recordNumbers) || [];
     if (!Array.isArray(recordNumbers) || !recordNumbers.length) {
       return res.status(400).json({ error: "Expected a non-empty 'recordNumbers' array." });
     }
-    const wanted = new Set(recordNumbers.map(String));
-
-    const aditPay = await resolveAditPayModule();
-    if (!aditPay.found || !aditPay.lookupApiName) {
-      return res.status(502).json({ error: "Could not resolve the Adit Pay module." });
-    }
-
-    const dealIdByRecordNumber = {};
-    {
-      const fields = encodeURIComponent(["Name", aditPay.lookupApiName].join(","));
-      let pageToken = null;
-      for (let i = 0; i < 100; i++) {
-        let url = "/crm/v8/" + encodeURIComponent(aditPay.apiName) + "?fields=" + fields + "&per_page=200";
-        if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
-        const data = await zohoApiGet(url);
-        const records = data.data || [];
-        records.forEach(function (rec) {
-          const name = rec.Name;
-          if (name != null && wanted.has(String(name))) {
-            const lookupVal = rec[aditPay.lookupApiName];
-            const dealId = lookupVal && typeof lookupVal === "object" ? lookupVal.id : lookupVal;
-            if (dealId) dealIdByRecordNumber[String(name)] = dealId;
-          }
-        });
-        const more = data.info && data.info.more_records;
-        pageToken = data.info && data.info.next_page_token;
-        if (!more || !pageToken) break;
-      }
-    }
-
-    const scopeByDealId = {};
-    {
-      const neededIds = new Set(Object.values(dealIdByRecordNumber));
-      const fields = encodeURIComponent(["id"].concat(Object.values(SCOPE_FILTER_FIELDS)).join(","));
-      let pageToken = null;
-      for (let i = 0; i < 100; i++) {
-        let url = "/crm/v8/Deals?fields=" + fields + "&per_page=200";
-        if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
-        const data = await zohoApiGet(url);
-        const records = data.data || [];
-        records.forEach(function (rec) {
-          if (neededIds.has(rec.id)) {
-            const f = {};
-            Object.keys(SCOPE_FILTER_FIELDS).forEach(function (k) { f[k] = flattenZohoValue(rec[SCOPE_FILTER_FIELDS[k]]); });
-            scopeByDealId[rec.id] = f;
-          }
-        });
-        const more = data.info && data.info.more_records;
-        pageToken = data.info && data.info.next_page_token;
-        if (!more || !pageToken) break;
-      }
-    }
-
-    const now = new Date();
-    const results = [];
-    let matched = 0, rejected = 0, noDealFound = 0;
-    recordNumbers.forEach(function (rn) {
-      const dealId = dealIdByRecordNumber[String(rn)];
-      if (!dealId) { noDealFound++; results.push({ recordNumber: rn, error: "no matching Deal found via Adit Pay lookup" }); return; }
-      const f = scopeByDealId[dealId];
-      if (!f) { noDealFound++; results.push({ recordNumber: rn, dealId: dealId, error: "deal id not found in Deals fetch" }); return; }
-      const passes = dealMatchesTerminalPurchaseScope(f, now);
-      if (passes) { matched++; return; }
-      rejected++;
-      const cond1 = f.terminalsSelected === "Yes";
-      const cond2 = !(f.dealName && String(f.dealName).toLowerCase().indexOf("test") !== -1);
-      const cond3 = SCOPE_STAGE_ALLOWLIST.indexOf(f.stage) !== -1;
-      let cond4 = false, cond5 = false;
-      if (f.agreementSignedDate) {
-        const d = new Date(f.agreementSignedDate);
-        if (!isNaN(d.getTime())) {
-          const cutoff = new Date(now);
-          cutoff.setUTCMonth(cutoff.getUTCMonth() - 108);
-          cond4 = d >= cutoff && d <= now;
-          cond5 = d.getUTCFullYear() === now.getUTCFullYear() && d.getUTCMonth() === now.getUTCMonth();
-        }
-      }
-      const cond6 = f.terminalCount != null && Number(f.terminalCount) >= 1;
-      const cond7 = f.stage !== "Closed Lost";
-      results.push({
-        recordNumber: rn, dealId: dealId, raw: f,
-        conditions: { cond1_terminalsSelectedYes: cond1, cond2_nameNoTest: cond2, cond3_stageAllowed: cond3, cond4_within108mo: cond4, cond5_currentMonth: cond5, cond6_terminalCountGte1: cond6, cond7_notClosedLost: cond7 },
-      });
-    });
-
-    res.json({
-      totalRequested: recordNumbers.length,
-      matched: matched,
-      rejected: rejected,
-      noDealFound: noDealFound,
-      rejectedSample: results.filter(function (r) { return r.conditions; }),
-      notFoundSample: results.filter(function (r) { return r.error; }).slice(0, 10),
-    });
+    const result = await computeScopeAudit(recordNumbers);
+    res.json(result);
   } catch (err) {
     console.error("[zoho] scope-audit failed:", err.message);
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
+  }
+});
+
+// GET convenience version of the same audit using the embedded ground-truth Record
+// Numbers above, so it can be run by simply visiting this URL in a signed-in browser
+// tab (no console or JS paste required). Read-only; never returns credentials.
+app.get("/api/zoho/scope-audit-run", requireAuth, async (req, res) => {
+  try {
+    const result = await computeScopeAudit(DEFAULT_AUDIT_RECORD_NUMBERS);
+    res.json(result);
+  } catch (err) {
+    console.error("[zoho] scope-audit-run failed:", err.message);
     res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
   }
 });
