@@ -224,7 +224,7 @@ const SCOPE_FILTER_FIELDS = {
   agreementSignedDate: "Agreement_Signed_Date",
   terminalCount: "Terminal_Count",
 };
-const SCOPE_STAGE_ALLOWLIST = ["Get Started", "Closed Won", "Onboarding", "CSM"];
+const SCOPE_STAGE_ALLOWLIST = ["Getting Started", "Closed Won", "Onboarding", "CSM"];
 
 function dealMatchesTerminalPurchaseScope(f, now) {
   const terminalsSelected = f.terminalsSelected;
@@ -795,6 +795,118 @@ app.get("/api/zoho/fields-debug", requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error("[zoho] fields-debug failed:", err.message);
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
+  }
+});
+
+// Diagnostic/debugging helper: given a list of Record Numbers (the Adit Pay
+// module's own Name field) known-good from Adit's real report export,
+// reports which ones the live dealMatchesTerminalPurchaseScope filter
+// currently accepts/rejects, and — for a sample of the rejected ones — the
+// raw scope field values plus a per-condition true/false breakdown. Used to
+// pinpoint exactly which condition diverges from the real report's
+// criteria. Read-only; never returns credentials.
+app.post("/api/zoho/scope-audit", requireAuth, async (req, res) => {
+  try {
+    const recordNumbers = (req.body && req.body.recordNumbers) || [];
+    if (!Array.isArray(recordNumbers) || !recordNumbers.length) {
+      return res.status(400).json({ error: "Expected a non-empty 'recordNumbers' array." });
+    }
+    const wanted = new Set(recordNumbers.map(String));
+
+    const aditPay = await resolveAditPayModule();
+    if (!aditPay.found || !aditPay.lookupApiName) {
+      return res.status(502).json({ error: "Could not resolve the Adit Pay module." });
+    }
+
+    const dealIdByRecordNumber = {};
+    {
+      const fields = encodeURIComponent(["Name", aditPay.lookupApiName].join(","));
+      let pageToken = null;
+      for (let i = 0; i < 100; i++) {
+        let url = "/crm/v8/" + encodeURIComponent(aditPay.apiName) + "?fields=" + fields + "&per_page=200";
+        if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
+        const data = await zohoApiGet(url);
+        const records = data.data || [];
+        records.forEach(function (rec) {
+          const name = rec.Name;
+          if (name != null && wanted.has(String(name))) {
+            const lookupVal = rec[aditPay.lookupApiName];
+            const dealId = lookupVal && typeof lookupVal === "object" ? lookupVal.id : lookupVal;
+            if (dealId) dealIdByRecordNumber[String(name)] = dealId;
+          }
+        });
+        const more = data.info && data.info.more_records;
+        pageToken = data.info && data.info.next_page_token;
+        if (!more || !pageToken) break;
+      }
+    }
+
+    const scopeByDealId = {};
+    {
+      const neededIds = new Set(Object.values(dealIdByRecordNumber));
+      const fields = encodeURIComponent(["id"].concat(Object.values(SCOPE_FILTER_FIELDS)).join(","));
+      let pageToken = null;
+      for (let i = 0; i < 100; i++) {
+        let url = "/crm/v8/Deals?fields=" + fields + "&per_page=200";
+        if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
+        const data = await zohoApiGet(url);
+        const records = data.data || [];
+        records.forEach(function (rec) {
+          if (neededIds.has(rec.id)) {
+            const f = {};
+            Object.keys(SCOPE_FILTER_FIELDS).forEach(function (k) { f[k] = flattenZohoValue(rec[SCOPE_FILTER_FIELDS[k]]); });
+            scopeByDealId[rec.id] = f;
+          }
+        });
+        const more = data.info && data.info.more_records;
+        pageToken = data.info && data.info.next_page_token;
+        if (!more || !pageToken) break;
+      }
+    }
+
+    const now = new Date();
+    const results = [];
+    let matched = 0, rejected = 0, noDealFound = 0;
+    recordNumbers.forEach(function (rn) {
+      const dealId = dealIdByRecordNumber[String(rn)];
+      if (!dealId) { noDealFound++; results.push({ recordNumber: rn, error: "no matching Deal found via Adit Pay lookup" }); return; }
+      const f = scopeByDealId[dealId];
+      if (!f) { noDealFound++; results.push({ recordNumber: rn, dealId: dealId, error: "deal id not found in Deals fetch" }); return; }
+      const passes = dealMatchesTerminalPurchaseScope(f, now);
+      if (passes) { matched++; return; }
+      rejected++;
+      const cond1 = f.terminalsSelected === "Yes";
+      const cond2 = !(f.dealName && String(f.dealName).toLowerCase().indexOf("test") !== -1);
+      const cond3 = SCOPE_STAGE_ALLOWLIST.indexOf(f.stage) !== -1;
+      let cond4 = false, cond5 = false;
+      if (f.agreementSignedDate) {
+        const d = new Date(f.agreementSignedDate);
+        if (!isNaN(d.getTime())) {
+          const cutoff = new Date(now);
+          cutoff.setUTCMonth(cutoff.getUTCMonth() - 108);
+          cond4 = d >= cutoff && d <= now;
+          cond5 = d.getUTCFullYear() === now.getUTCFullYear() && d.getUTCMonth() === now.getUTCMonth();
+        }
+      }
+      const cond6 = f.terminalCount != null && Number(f.terminalCount) >= 1;
+      const cond7 = f.stage !== "Closed Lost";
+      results.push({
+        recordNumber: rn, dealId: dealId, raw: f,
+        conditions: { cond1_terminalsSelectedYes: cond1, cond2_nameNoTest: cond2, cond3_stageAllowed: cond3, cond4_within108mo: cond4, cond5_currentMonth: cond5, cond6_terminalCountGte1: cond6, cond7_notClosedLost: cond7 },
+      });
+    });
+
+    res.json({
+      totalRequested: recordNumbers.length,
+      matched: matched,
+      rejected: rejected,
+      noDealFound: noDealFound,
+      rejectedSample: results.filter(function (r) { return r.conditions; }),
+      notFoundSample: results.filter(function (r) { return r.error; }).slice(0, 10),
+    });
+  } catch (err) {
+    console.error("[zoho] scope-audit failed:", err.message);
     res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
   }
 });
