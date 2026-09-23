@@ -336,29 +336,41 @@ async function fetchZohoDealsAsRows() {
   const cvidParam = ZOHO_DEALS_CVID ? "&cvid=" + encodeURIComponent(ZOHO_DEALS_CVID) : "";
 
   const dealsPromise = fetchDealsPages(fieldsParam, cvidParam, matchedKeys, fieldMap);
+  // A failure fetching the Adit Pay module's own records (e.g. an OAuth scope
+  // mismatch specific to that module, distinct from the scopes Deals needs)
+  // must not sink the whole sync — the Deals data can still be perfectly
+  // good on its own. Caught here and treated like "module not found": these
+  // two columns are dropped from the output, not faked, so the client's
+  // existing "missing required columns" screen still reports them honestly.
   const aditPayPromise = aditPayKeys.length
-    ? fetchAditPayById(aditPay, aditPayKeys, aditPayFieldMap)
+    ? fetchAditPayById(aditPay, aditPayKeys, aditPayFieldMap).catch(function (e) {
+        console.warn("[zoho] Could not fetch Adit Pay records (" + e.message + ") — Record Number/Adit Pay Volume will be reported as missing.");
+        return null;
+      })
     : Promise.resolve(null);
 
   const [dealsResult, byDealId] = await Promise.all([dealsPromise, aditPayPromise]);
   const rows = dealsResult.rows;
   const dealIds = dealsResult.dealIds;
 
+  // aditPayKeys may be non-empty even when byDealId is null (the fetch above
+  // failed and was caught) — joinedKeys is what actually made it into rows.
+  const joinedKeys = byDealId ? aditPayKeys : [];
   if (byDealId) {
     // A deal without a matching Adit Pay record (e.g. not yet processed) gets
     // null cells for these columns — the row still comes through with every
     // other column intact, rather than being dropped.
     rows.forEach(function (row, idx) {
       const joined = byDealId[dealIds[idx]];
-      aditPayKeys.forEach(function (k, j) { row.push(joined ? joined[j] : null); });
+      joinedKeys.forEach(function (k, j) { row.push(joined ? joined[j] : null); });
     });
   }
 
-  const finalKeys = matchedKeys.concat(aditPayKeys);
+  const finalKeys = matchedKeys.concat(joinedKeys);
   const headers = finalKeys.map(function (k) { return ZOHO_CANON_FIELDS[k].label; });
   console.log(
     "[zoho] Deals sync: matched " + finalKeys.length + "/" + Object.keys(ZOHO_CANON_FIELDS).length +
-    " columns (" + matchedKeys.length + " on Deals, " + aditPayKeys.length + " on Adit Pay), fetched " +
+    " columns (" + matchedKeys.length + " on Deals, " + joinedKeys.length + " on Adit Pay), fetched " +
     rows.length + " records" + (ZOHO_DEALS_CVID ? " (custom view applied)." : " (no custom view configured — full Deals pull).")
   );
   return { headers: headers, rows: rows, matchedColumns: finalKeys.length };
