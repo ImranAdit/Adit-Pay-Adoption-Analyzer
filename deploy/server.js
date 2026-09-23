@@ -774,6 +774,53 @@ app.get("/api/zoho/deal-field-finder", requireAuth, async (req, res) => {
   }
 });
 
+// Temporary diagnostic: uses Zoho's full-text record search to find the real
+// Deal behind a known ground-truth Record Number ("AS - 6244"), then scans
+// every field on that Deal for whichever one holds that exact text. Read-only;
+// never returns credentials.
+app.get("/api/zoho/deal-search-sample", requireAuth, async (req, res) => {
+  try {
+    const probe = "AS - 6244";
+    const searchData = await zohoApiGet("/crm/v8/Deals/search?word=" + encodeURIComponent(probe));
+    const matches = searchData.data || [];
+    if (!matches.length) {
+      return res.json({ probe: probe, found: false, note: "No Deals matched this text via Zoho's search API." });
+    }
+    const dealId = matches[0].id;
+    const fieldMeta = await zohoApiGet("/crm/v8/settings/fields?module=Deals");
+    const allFields = fieldMeta.fields || [];
+    const apiNames = allFields.map(function (f) { return f.api_name; });
+    const chunkSize = 40;
+    const merged = {};
+    for (let i = 0; i < apiNames.length; i += chunkSize) {
+      const chunk = apiNames.slice(i, i + chunkSize);
+      const url = "/crm/v8/Deals/" + dealId + "?fields=" + encodeURIComponent(chunk.join(","));
+      try {
+        const data = await zohoApiGet(url);
+        const rec = (data.data && data.data[0]) || {};
+        Object.assign(merged, rec);
+      } catch (chunkErr) {
+        console.warn("[zoho] deal-search-sample chunk failed:", chunkErr.message);
+      }
+    }
+    const matchFields = [];
+    Object.keys(merged).forEach(function (k) {
+      const v = flattenZohoValue(merged[k]);
+      if (typeof v === "string" && v.trim() === probe) matchFields.push(k);
+    });
+    res.json({
+      probe: probe,
+      dealId: dealId,
+      dealName: merged.Deal_Name || null,
+      matchFields: matchFields,
+      matchCount: matches.length,
+    });
+  } catch (err) {
+    console.error("[zoho] deal-search-sample failed:", err.message);
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
+  }
+});
+
 app.get("/api/zoho/sync-debug", requireAuth, async (req, res) => {
   try {
     const result = await fetchZohoDealsAsRows();
