@@ -588,6 +588,94 @@ app.get("/api/zoho/aditpay-debug", requireAuth, async (req, res) => {
   }
 });
 
+// Diagnostic/debugging helper: runs the exact same fetchZohoDealsAsRows()
+// pipeline the dashboard uses to fetch and join live data, then re-implements
+// the client's parseVolume() validation logic here so we can see, server-side,
+// exactly how many of the real fetched rows would be excluded/kept once the
+// dashboard's row validation runs on them. Used to isolate whether "far fewer
+// deals shown than fetched" is a genuine data-quality issue (most rows have
+// missing/invalid/negative Adit Pay Volume) or a client-side bug. Read-only;
+// never returns credentials.
+function parseVolumeServer(v) {
+  if (v == null || v === "") return { blank: true, valid: true, value: null };
+  if (typeof v === "number") return { blank: false, valid: !isNaN(v), value: v };
+  var s = String(v).trim();
+  if (s === "") return { blank: true, valid: true, value: null };
+  var neg = /^\(.*\)$/.test(s);
+  s = s.replace(/[()$,\s]/g, "");
+  if (s === "") return { blank: true, valid: true, value: null };
+  var n = parseFloat(s);
+  if (isNaN(n)) return { blank: false, valid: false, value: v };
+  if (neg) n = -Math.abs(n);
+  return { blank: false, valid: true, value: n };
+}
+
+app.get("/api/zoho/sync-debug", requireAuth, async (req, res) => {
+  try {
+    const result = await fetchZohoDealsAsRows();
+    const headers = result.headers;
+    const rows = result.rows;
+    const volIdx = headers.indexOf(ZOHO_CANON_FIELDS.aditPayVolume.label);
+    const recIdx = headers.indexOf(ZOHO_CANON_FIELDS.recordNumber.label);
+    const termIdx = headers.indexOf(ZOHO_CANON_FIELDS.terminalCount.label);
+    const nameIdx = headers.indexOf(ZOHO_CANON_FIELDS.dealName.label);
+
+    let blankRows = 0, blankVolume = 0, validVolume = 0, invalidVolume = 0, negativeVolume = 0;
+    let blankRecordNumber = 0, blankTerminalCount = 0, blankDealName = 0;
+    const invalidSamples = [];
+    const negativeSamples = [];
+
+    rows.forEach(function (row) {
+      const isBlank = row.every(function (c) { return c == null || String(c).trim() === ""; });
+      if (isBlank) { blankRows++; return; }
+
+      const volRaw = volIdx >= 0 ? row[volIdx] : null;
+      const parsed = parseVolumeServer(volRaw);
+      if (parsed.blank) blankVolume++;
+      else if (!parsed.valid) {
+        invalidVolume++;
+        if (invalidSamples.length < 10) invalidSamples.push(volRaw);
+      } else if (parsed.value < 0) {
+        negativeVolume++;
+        if (negativeSamples.length < 10) negativeSamples.push(volRaw);
+      } else {
+        validVolume++;
+      }
+
+      const recRaw = recIdx >= 0 ? row[recIdx] : null;
+      if (recRaw == null || String(recRaw).trim() === "") blankRecordNumber++;
+      const termRaw = termIdx >= 0 ? row[termIdx] : null;
+      if (termRaw == null || String(termRaw).trim() === "") blankTerminalCount++;
+      const nameRaw = nameIdx >= 0 ? row[nameIdx] : null;
+      if (nameRaw == null || String(nameRaw).trim() === "") blankDealName++;
+    });
+
+    res.json({
+      totalRowsFetched: rows.length,
+      blankRows: blankRows,
+      nonBlankRows: rows.length - blankRows,
+      excludedByVolume: invalidVolume + negativeVolume,
+      wouldBeIncludedOnDashboard: rows.length - blankRows - invalidVolume - negativeVolume,
+      volume: {
+        blank_assumedZero: blankVolume,
+        valid: validVolume,
+        invalid_nonNumeric: invalidVolume,
+        negative: negativeVolume,
+        invalidSamples: invalidSamples,
+        negativeSamples: negativeSamples,
+      },
+      otherWarningsOnly_notExcluded: {
+        blankRecordNumber: blankRecordNumber,
+        blankTerminalCount: blankTerminalCount,
+        blankDealName: blankDealName,
+      },
+    });
+  } catch (err) {
+    console.error("[zoho] sync-debug failed:", err.message);
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
+  }
+});
+
 // GET returns the last processed dataset (if any) so the dashboard can load it
 // automatically on sign-in. POST saves a newly-processed upload, replacing
 // whatever was previously stored. Neither route touches the shape of the data
