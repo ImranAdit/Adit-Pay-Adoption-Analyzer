@@ -792,6 +792,7 @@ app.get("/api/zoho/deal-search-sample", requireAuth, async (req, res) => {
     const apiNames = allFields.map(function (f) { return f.api_name; });
     const chunkSize = 40;
     const merged = {};
+    const chunkErrors = [];
     for (let i = 0; i < apiNames.length; i += chunkSize) {
       const chunk = apiNames.slice(i, i + chunkSize);
       const url = "/crm/v8/Deals/" + dealId + "?fields=" + encodeURIComponent(chunk.join(","));
@@ -800,20 +801,27 @@ app.get("/api/zoho/deal-search-sample", requireAuth, async (req, res) => {
         const rec = (data.data && data.data[0]) || {};
         Object.assign(merged, rec);
       } catch (chunkErr) {
-        console.warn("[zoho] deal-search-sample chunk failed:", chunkErr.message);
+        chunkErrors.push({ chunkIndex: i / chunkSize, fields: chunk, error: chunkErr.message });
       }
     }
-    const matchFields = [];
+    const substringMatches = [];
+    const probeDigits = probe.replace(/[^0-9]/g, "");
     Object.keys(merged).forEach(function (k) {
       const v = flattenZohoValue(merged[k]);
-      if (typeof v === "string" && v.trim() === probe) matchFields.push(k);
+      if (v == null) return;
+      const s = String(v);
+      if (s.indexOf(probeDigits) !== -1) substringMatches.push({ api_name: k, value: v });
     });
     res.json({
       probe: probe,
+      probeDigits: probeDigits,
       dealId: dealId,
       dealName: merged.Deal_Name || null,
-      matchFields: matchFields,
       matchCount: matches.length,
+      fieldsRequested: apiNames.length,
+      fieldsReturned: Object.keys(merged).length,
+      chunkErrors: chunkErrors,
+      substringMatches: substringMatches,
     });
   } catch (err) {
     console.error("[zoho] deal-search-sample failed:", err.message);
