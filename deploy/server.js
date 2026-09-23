@@ -533,6 +533,61 @@ app.get("/api/zoho/views", requireAuth, async (req, res) => {
   }
 });
 
+// Diagnostic/debugging helper: inspects the auto-discovered "Adit Pay" module
+// and its lookup field back to Deals, and reports how many of its records
+// actually carry a resolvable link to a Deal, plus a few raw sample values.
+// Used to track down cases where the join in fetchZohoDealsAsRows() matches
+// far fewer (or more) deals than expected. Read-only; never returns credentials.
+app.get("/api/zoho/aditpay-debug", requireAuth, async (req, res) => {
+  try {
+    const aditPay = await resolveAditPayModule();
+    if (!aditPay.found) {
+      return res.json({ found: false });
+    }
+    const fieldNames = aditPay.fields.map(function (f) {
+      return {
+        api_name: f.api_name,
+        field_label: f.field_label,
+        lookup_module: f.lookup && f.lookup.module ? f.lookup.module.api_name : null,
+      };
+    });
+    const lookupFields = fieldNames.filter(function (f) { return f.lookup_module; });
+
+    let totalRecords = 0;
+    const sampleLookupValues = [];
+    let pageToken = null;
+    const perPage = 200;
+    const fetchFields = aditPay.lookupApiName ? ["id", aditPay.lookupApiName] : ["id"];
+    for (let i = 0; i < 100; i++) {
+      let url = "/crm/v8/" + encodeURIComponent(aditPay.apiName) + "?fields=" + encodeURIComponent(fetchFields.join(",")) + "&per_page=" + perPage;
+      if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
+      const data = await zohoApiGet(url);
+      const records = data.data || [];
+      totalRecords += records.length;
+      records.forEach(function (rec) {
+        if (sampleLookupValues.length < 5) {
+          sampleLookupValues.push({ id: rec.id, lookupRaw: aditPay.lookupApiName ? rec[aditPay.lookupApiName] : null });
+        }
+      });
+      const more = data.info && data.info.more_records;
+      pageToken = data.info && data.info.next_page_token;
+      if (!more || !pageToken) break;
+    }
+
+    res.json({
+      found: true,
+      apiName: aditPay.apiName,
+      lookupApiName: aditPay.lookupApiName,
+      allLookupFieldsOnThisModule: lookupFields,
+      totalRecordsInModule: totalRecords,
+      sampleLookupValues: sampleLookupValues,
+    });
+  } catch (err) {
+    console.error("[zoho] Adit Pay debug failed:", err.message);
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
+  }
+});
+
 // GET returns the last processed dataset (if any) so the dashboard can load it
 // automatically on sign-in. POST saves a newly-processed upload, replacing
 // whatever was previously stored. Neither route touches the shape of the data
