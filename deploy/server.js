@@ -732,6 +732,48 @@ app.get("/api/zoho/aditpay-name-sample", requireAuth, async (req, res) => {
   }
 });
 
+// Temporary diagnostic: fetches one known real Deal record (linked to Adit
+// Pay record "AP - 6493") across every field on the Deals module and flags
+// whichever field's value matches the "AS - ####" Record Number pattern seen
+// in the business's real report export, so we can find its true api_name.
+// Read-only; never returns credentials.
+app.get("/api/zoho/deal-field-finder", requireAuth, async (req, res) => {
+  try {
+    const dealId = "1607362002108433141";
+    const fieldMeta = await zohoApiGet("/crm/v8/settings/fields?module=Deals");
+    const allFields = fieldMeta.fields || [];
+    const apiNames = allFields.map(function (f) { return f.api_name; });
+    const chunkSize = 40;
+    const merged = {};
+    for (let i = 0; i < apiNames.length; i += chunkSize) {
+      const chunk = apiNames.slice(i, i + chunkSize);
+      const url = "/crm/v8/Deals/" + dealId + "?fields=" + encodeURIComponent(chunk.join(","));
+      try {
+        const data = await zohoApiGet(url);
+        const rec = (data.data && data.data[0]) || {};
+        Object.assign(merged, rec);
+      } catch (chunkErr) {
+        console.warn("[zoho] deal-field-finder chunk failed:", chunkErr.message);
+      }
+    }
+    const candidates = [];
+    const nonEmptyPreview = [];
+    Object.keys(merged).forEach(function (k) {
+      const v = flattenZohoValue(merged[k]);
+      if (typeof v === "string" && /^AS\s*-\s*\d+$/i.test(v.trim())) {
+        candidates.push({ api_name: k, value: v });
+      }
+      if (v != null && v !== "" && typeof v !== "object" && String(v).length < 60 && nonEmptyPreview.length < 80) {
+        nonEmptyPreview.push({ api_name: k, value: v });
+      }
+    });
+    res.json({ dealId: dealId, candidates: candidates, nonEmptyPreview: nonEmptyPreview });
+  } catch (err) {
+    console.error("[zoho] deal-field-finder failed:", err.message);
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
+  }
+});
+
 app.get("/api/zoho/sync-debug", requireAuth, async (req, res) => {
   try {
     const result = await fetchZohoDealsAsRows();
