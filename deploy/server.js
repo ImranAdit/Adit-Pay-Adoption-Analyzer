@@ -56,6 +56,13 @@ const ZOHO_CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET || "";
 const ZOHO_REFRESH_TOKEN = process.env.ZOHO_REFRESH_TOKEN || "";
 const ZOHO_API_DOMAIN = process.env.ZOHO_API_DOMAIN || "https://www.zohoapis.com";
 const ZOHO_ACCOUNTS_DOMAIN = process.env.ZOHO_ACCOUNTS_DOMAIN || "https://accounts.zoho.com";
+// Optional: the id of a Custom View created in the Zoho CRM Deals module UI,
+// scoped to the stages where a customer could realistically have an Adit Pay
+// terminal (e.g. Closed Won, CSM, Onboarding, Sign Up, Getting Started).
+// Zoho\u2019s Get Records API has no generic "criteria" filter parameter \u2014 a
+// Custom View (referenced by its id via "cvid") is the supported way to scope
+// server-side. Leave unset to pull the full, unfiltered Deals module.
+const ZOHO_DEALS_CVID = process.env.ZOHO_DEALS_CVID || "";
 
 if (!ZOHO_CLIENT_ID || !ZOHO_CLIENT_SECRET || !ZOHO_REFRESH_TOKEN) {
   console.warn("[zoho] ZOHO_CLIENT_ID/ZOHO_CLIENT_SECRET/ZOHO_REFRESH_TOKEN are not fully set — loading from Zoho will not work until configured.");
@@ -152,14 +159,58 @@ function flattenZohoValue(v) {
   return v;
 }
 
+// Discovers the "Adit Pay" Zoho module by name (its real api_name varies by
+// account setup, so this is never hardcoded) and the field on it that looks
+// back to Deals, by scanning module and field metadata. Cached in memory for
+// the life of the process since this almost never changes.
+let aditPayModuleCache = null;
+async function resolveAditPayModule() {
+  if (aditPayModuleCache) return aditPayModuleCache;
+  const modData = await zohoApiGet("/crm/v8/settings/modules");
+  const modules = modData.modules || [];
+  const match = modules.find(function (m) {
+    return ["module_name", "api_name", "plural_label", "singular_label"].some(function (prop) {
+      return normHeaderServer(m[prop]).indexOf("aditpay") !== -1;
+    });
+  });
+  if (!match) {
+    aditPayModuleCache = { found: false };
+    return aditPayModuleCache;
+  }
+  const apiName = match.api_name;
+  const fieldMeta = await zohoApiGet("/crm/v8/settings/fields?module=" + encodeURIComponent(apiName));
+  const allFields = fieldMeta.fields || [];
+  const lookupField = allFields.find(function (f) {
+    return f.lookup && f.lookup.module && normHeaderServer(f.lookup.module.api_name) === "deals";
+  });
+  aditPayModuleCache = {
+    found: true,
+    apiName: apiName,
+    fields: allFields,
+    lookupApiName: lookupField ? lookupField.api_name : null,
+  };
+  return aditPayModuleCache;
+}
+
 // Builds { headers, rows } — an AOA (header row + data rows) shaped exactly
-// like a parsed spreadsheet — by matching Zoho Deals field labels/api names
-// against ZOHO_CANON_FIELDS, then paging through every Deal record.
+// like a parsed spreadsheet — by matching Zoho field labels/api names against
+// ZOHO_CANON_FIELDS, then paging through every Deal record.
+//
+// Two of the canonical columns ("Record Number", "Adit Pay Volume") don't
+// exist on the Deals module itself — they live on a separate, related "Adit
+// Pay" module. Any canonical key that doesn't match a Deals field is looked
+// up there instead (resolveAditPayModule, above) and joined in by deal id.
+// "Record Number" is always the Adit Pay module's own system "Name" field
+// (its built-in auto-number/record-name field), so that one is mapped
+// directly rather than alias-matched. If the Adit Pay module or its lookup
+// field back to Deals can't be found, those columns are left out of the
+// output entirely (not faked with blank values) so the client's existing
+// "missing required columns" screen reports them accurately.
 async function fetchZohoDealsAsRows() {
   const fieldMeta = await zohoApiGet("/crm/v8/settings/fields?module=Deals");
   const allFields = fieldMeta.fields || [];
 
-  const fieldMap = {}; // canonKey -> api_name
+  const fieldMap = {}; // canonKey -> api_name (on Deals)
   Object.keys(ZOHO_CANON_FIELDS).forEach(function (key) {
     const aliases = ZOHO_CANON_FIELDS[key].aliases;
     const match = allFields.find(function (f) {
@@ -168,8 +219,40 @@ async function fetchZohoDealsAsRows() {
     if (match) fieldMap[key] = match.api_name;
   });
 
+  const unmatchedKeys = Object.keys(ZOHO_CANON_FIELDS).filter(function (k) { return !fieldMap[k]; });
+  let aditPay = { found: false };
+  const aditPayFieldMap = {}; // canonKey -> api_name (on the Adit Pay module)
+  if (unmatchedKeys.length) {
+    try {
+      aditPay = await resolveAditPayModule();
+    } catch (e) {
+      console.warn("[zoho] Could not resolve the Adit Pay module:", e.message);
+    }
+    // Only attempt these columns when we can both find the module AND find its
+    // lookup field back to Deals — otherwise there is no reliable way to join
+    // rows, and reporting a header we can't actually populate would make the
+    // client's column-mapping think the data is present when it isn't.
+    if (aditPay.found && aditPay.lookupApiName) {
+      unmatchedKeys.forEach(function (key) {
+        if (key === "recordNumber") {
+          const nameField = aditPay.fields.find(function (f) { return f.api_name === "Name"; });
+          if (nameField) aditPayFieldMap[key] = "Name";
+          return;
+        }
+        const aliases = ZOHO_CANON_FIELDS[key].aliases;
+        const match = aditPay.fields.find(function (f) {
+          return aliases.indexOf(normHeaderServer(f.field_label)) !== -1 || aliases.indexOf(normHeaderServer(f.api_name)) !== -1;
+        });
+        if (match) aditPayFieldMap[key] = match.api_name;
+      });
+    } else {
+      console.warn("[zoho] Adit Pay module or its lookup field to Deals could not be resolved — " + unmatchedKeys.join(", ") + " will be reported as missing.");
+    }
+  }
+
   const matchedKeys = Object.keys(fieldMap);
-  if (!matchedKeys.length) {
+  const aditPayKeys = Object.keys(aditPayFieldMap);
+  if (!matchedKeys.length && !aditPayKeys.length) {
     const err = new Error("No matching fields found in the Zoho Deals module for the analyzer's expected columns.");
     err.code = "NO_FIELD_MATCH";
     throw err;
@@ -184,38 +267,72 @@ async function fetchZohoDealsAsRows() {
   // no "page" param at all, just follow info.next_page_token until Zoho
   // says there's nothing left. This has no such record-count ceiling.
   //
-  // The Deals module is the company's entire pipeline (20,000+ records),
-  // not just Adit Pay terminal deals, so the pull is scoped with a Stage
-  // criteria to the stages where a customer could realistically have an
-  // Adit Pay terminal — skipping deals that are lost, churned, or
-  // still pre-sale. This cuts a full sync from ~20,000 records to ~4,500.
-  const STAGE_FILTER = ["Closed Won", "CSM", "Onboarding", "Sign Up", "Getting Started"];
-  const stageCriteria = STAGE_FILTER.reduce(function (expr, stage) {
-    const cond = "(Stage:equals:" + stage + ")";
-    return expr ? "(" + expr + "or" + cond + ")" : cond;
-  }, "");
-  const criteriaParam = encodeURIComponent(stageCriteria);
+  // The Deals module is the company's entire pipeline (20,000+ records), not
+  // just Adit Pay terminal deals. Zoho's Get Records API has no generic
+  // "criteria" filter parameter (confirmed against the v8 API docs), so
+  // scoping this down to active-customer-stage deals uses a Custom View
+  // created in the Zoho CRM UI instead, referenced here by its id
+  // (ZOHO_DEALS_CVID). Without one configured, this pulls the full module.
+  const cvidParam = ZOHO_DEALS_CVID ? "&cvid=" + encodeURIComponent(ZOHO_DEALS_CVID) : "";
 
   const rows = [];
+  const dealIds = [];
   const perPage = 200;
   const maxPages = 100; // safety cap against a runaway loop
   let pageToken = null;
   for (let i = 0; i < maxPages; i++) {
-    let url = "/crm/v8/Deals?fields=" + fieldsParam + "&per_page=" + perPage + "&criteria=" + criteriaParam;
+    let url = "/crm/v8/Deals?fields=" + fieldsParam + "&per_page=" + perPage + cvidParam;
     if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
     const data = await zohoApiGet(url);
     const records = data.data || [];
     records.forEach(function (rec) {
       rows.push(matchedKeys.map(function (k) { return flattenZohoValue(rec[fieldMap[k]]); }));
+      dealIds.push(rec.id);
     });
     const more = data.info && data.info.more_records;
     pageToken = data.info && data.info.next_page_token;
     if (!more || !pageToken) break;
   }
 
-  const headers = matchedKeys.map(function (k) { return ZOHO_CANON_FIELDS[k].label; });
-  console.log("[zoho] Deals sync: matched " + matchedKeys.length + "/" + Object.keys(ZOHO_CANON_FIELDS).length + " columns, fetched " + rows.length + " records.");
-  return { headers: headers, rows: rows, matchedColumns: matchedKeys.length };
+  if (aditPayKeys.length) {
+    // aditPayKeys is only ever non-empty when aditPay.found && aditPay.lookupApiName
+    // (see above), so a reliable join is always possible here.
+    const aditPayApiNames = aditPayKeys.map(function (k) { return aditPayFieldMap[k]; });
+    const joinFieldsParam = encodeURIComponent([aditPay.lookupApiName].concat(aditPayApiNames).join(","));
+    const byDealId = {};
+    let apPageToken = null;
+    for (let i = 0; i < maxPages; i++) {
+      let url = "/crm/v8/" + encodeURIComponent(aditPay.apiName) + "?fields=" + joinFieldsParam + "&per_page=" + perPage;
+      if (apPageToken) url += "&page_token=" + encodeURIComponent(apPageToken);
+      const data = await zohoApiGet(url);
+      const records = data.data || [];
+      records.forEach(function (rec) {
+        const lookupVal = rec[aditPay.lookupApiName];
+        const dealId = lookupVal && typeof lookupVal === "object" ? lookupVal.id : lookupVal;
+        if (!dealId) return;
+        byDealId[dealId] = aditPayKeys.map(function (k) { return flattenZohoValue(rec[aditPayFieldMap[k]]); });
+      });
+      const more = data.info && data.info.more_records;
+      apPageToken = data.info && data.info.next_page_token;
+      if (!more || !apPageToken) break;
+    }
+    // A deal without a matching Adit Pay record (e.g. not yet processed) gets
+    // null cells for these columns — the row still comes through with every
+    // other column intact, rather than being dropped.
+    rows.forEach(function (row, idx) {
+      const joined = byDealId[dealIds[idx]];
+      aditPayKeys.forEach(function (k, j) { row.push(joined ? joined[j] : null); });
+    });
+  }
+
+  const finalKeys = matchedKeys.concat(aditPayKeys);
+  const headers = finalKeys.map(function (k) { return ZOHO_CANON_FIELDS[k].label; });
+  console.log(
+    "[zoho] Deals sync: matched " + finalKeys.length + "/" + Object.keys(ZOHO_CANON_FIELDS).length +
+    " columns (" + matchedKeys.length + " on Deals, " + aditPayKeys.length + " on Adit Pay), fetched " +
+    rows.length + " records" + (ZOHO_DEALS_CVID ? " (custom view applied)." : " (no custom view configured — full Deals pull).")
+  );
+  return { headers: headers, rows: rows, matchedColumns: finalKeys.length };
 }
 
 // --- Shared dataset persistence ---
@@ -355,6 +472,23 @@ app.get("/api/zoho/deals", requireAuth, async (req, res) => {
     // as an authentication failure for the user's purposes — this is the only
     // message ever returned here, and it never includes err.message, which is
     // logged server-side above but never sent to the browser.
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
+  }
+});
+
+// Diagnostic/setup helper: lists the Custom Views defined on the Zoho Deals
+// module, so whoever configures ZOHO_DEALS_CVID can find the id of a view
+// they created in the Zoho CRM UI without digging through Zoho\u2019s own admin
+// screens. Read-only; never returns credentials.
+app.get("/api/zoho/views", requireAuth, async (req, res) => {
+  try {
+    const data = await zohoApiGet("/crm/v8/settings/custom_views?module=Deals");
+    const views = (data.custom_views || []).map(function (v) {
+      return { id: v.id, name: v.name, default: !!v.default, system_defined: !!v.system_defined };
+    });
+    res.json({ views: views });
+  } catch (err) {
+    console.error("[zoho] Fetching custom views failed:", err.message);
     res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
   }
 });
