@@ -805,34 +805,49 @@ function loadFromZoho(opts){
 }
 
 // On page load, load data automatically so every signed-in user sees a
-// dashboard right after login instead of an empty upload screen. Tries
-// Zoho CRM first — now that the sync is scoped to a Custom View (via the
-// optional ZOHO_DEALS_CVID) instead of pulling the entire Deals pipeline,
-// this is fast enough to run on every login — and falls back to the last
-// dataset stored on the server if Zoho isn't reachable, isn't configured,
-// or its required columns aren't mapped yet. Only if both fail does the
-// upload screen show, and even then it still offers "Load from Zoho CRM"
-// as a manual retry. Reuses the exact same rendering path a manual upload
-// uses (proceedToDashboard/renderAll), so nothing about how the dashboard
-// is built changes — only how App.processed/App.validation get populated
-// before it runs. The upload screen stays hidden (behind a brief "loading"
-// placeholder) until this check comes back, so it never flashes on screen
-// before disappearing.
+// dashboard right after login instead of an empty upload screen.
+//
+// Any dataset already cached on the server (from a prior Zoho sync or a
+// manual upload) renders INSTANTLY, without ever waiting on a live Zoho
+// call. A Zoho refresh is then kicked off quietly in the background: if it
+// succeeds, runValidation()'s existing proceedToDashboard()/persistDataset()
+// calls silently re-render and re-cache the dashboard with fresh data (safe
+// to call more than once — renderCharts() tears down and rebuilds its
+// charts every time). If the background refresh fails or isn't ready yet,
+// the cached dashboard the user is already looking at simply stays as-is.
+//
+// Only on a true first-ever sync — nothing cached yet — does this wait on
+// Zoho before showing anything, since there's nothing else to show. The
+// loading message says a first sync can take a few minutes, so it doesn't
+// read as stuck. If that first attempt fails too, this falls back to the
+// upload screen, which still offers "Load from Zoho CRM" as a manual retry.
 function tryAutoLoadDataset(){
-  loadFromZoho({silent:true}).then(function(loaded){
-    if (!loaded) return loadStoredDataset();
-  }).catch(function(err){
-    console.warn("Zoho auto-load not available yet, falling back to the stored dataset:", err);
-    return loadStoredDataset();
+  loadStoredDataset().then(function(hadCache){
+    if (hadCache){
+      loadFromZoho({silent:true}).catch(function(err){
+        console.warn("Background Zoho refresh failed, keeping the cached dashboard:", err);
+      });
+      return;
+    }
+    var loadingMsg = document.querySelector("#initialLoading .panel-sub");
+    if (loadingMsg) loadingMsg.textContent = "Loading your dashboard… the first sync can take a few minutes while we pull your CRM data.";
+    loadFromZoho({silent:true}).catch(function(err){
+      console.warn("Zoho auto-load not available yet, falling back to the upload screen:", err);
+      document.getElementById("initialLoading").hidden = true;
+      document.getElementById("uploadSection").hidden = false;
+    });
   });
 }
 
+// Loads the last dataset cached on the server (from a prior Zoho sync or
+// manual upload), if any, and renders it immediately via the same path a
+// manual upload uses. Resolves true if a cached dataset was found and
+// rendered, false otherwise. Never shows the upload screen itself on a
+// miss — the caller decides what to do next (e.g. try Zoho live).
 function loadStoredDataset(){
   return fetch("/api/dataset").then(function(r){ return r.ok ? r.json() : null; }).then(function(data){
     if (!data || !data.exists || !data.processed || !data.processed.length){
-      document.getElementById("initialLoading").hidden = true;
-      document.getElementById("uploadSection").hidden = false;
-      return;
+      return false;
     }
     App.fileName = data.fileName || null;
     App.processed = reviveProcessedRows(data.processed);
@@ -842,10 +857,10 @@ function loadStoredDataset(){
     };
     document.getElementById("initialLoading").hidden = true;
     proceedToDashboard();
+    return true;
   }).catch(function(err){
     console.warn("Could not auto-load previous dataset:", err);
-    document.getElementById("initialLoading").hidden = true;
-    document.getElementById("uploadSection").hidden = false;
+    return false;
   });
 }
 tryAutoLoadDataset();
