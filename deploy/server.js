@@ -705,6 +705,33 @@ function parseVolumeServer(v) {
   return { blank: false, valid: true, value: n };
 }
 
+// Temporary diagnostic: shows the raw "Name" field value Zoho actually
+// returns for a handful of Adit Pay records, to verify the assumption that
+// Record Number == the Adit Pay module's system Name field. Read-only;
+// never returns credentials.
+app.get("/api/zoho/aditpay-name-sample", requireAuth, async (req, res) => {
+  try {
+    const aditPay = await resolveAditPayModule();
+    if (!aditPay.found) {
+      return res.json({ found: false });
+    }
+    const fetchFields = aditPay.lookupApiName ? ["id", "Name", aditPay.lookupApiName] : ["id", "Name"];
+    const url = "/crm/v8/" + encodeURIComponent(aditPay.apiName) + "?fields=" + encodeURIComponent(fetchFields.join(",")) + "&per_page=10";
+    const data = await zohoApiGet(url);
+    const records = data.data || [];
+    res.json({
+      found: true,
+      apiName: aditPay.apiName,
+      requestedFields: fetchFields,
+      rawRecordCount: records.length,
+      rawRecords: records,
+    });
+  } catch (err) {
+    console.error("[zoho] Adit Pay name sample failed:", err.message);
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
+  }
+});
+
 app.get("/api/zoho/sync-debug", requireAuth, async (req, res) => {
   try {
     const result = await fetchZohoDealsAsRows();
