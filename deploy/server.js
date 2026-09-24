@@ -799,6 +799,75 @@ app.get("/api/zoho/deals-lookup-fields", requireAuth, async (req, res) => {
   }
 });
 
+// Diagnostic/debugging helper: "Pay Score", "Pay Status", and "Pay Adopt
+// Date" are not resolving to any field on Deals or on the Adit Pay module
+// (confirmed via /api/zoho/sync-debug -- columnFound:false), yet they are
+// real columns in the business's own "All Deals which purchased Terminals"
+// report. This walks every module that Deals has a lookup field to (Adit
+// Pay, Tech OB, and any others), fetches each one's full field metadata, and
+// searches for fields matching those missing canonical columns -- so the
+// true source module and its exact field/lookup api_names can be identified
+// and wired into fetchZohoDealsAsRows(). Read-only; never returns credentials.
+app.get("/api/zoho/find-missing-fields", requireAuth, async (req, res) => {
+  try {
+    const targets = {
+      payScore: ZOHO_CANON_FIELDS.payScore.aliases,
+      payStatus: ZOHO_CANON_FIELDS.payStatus.aliases,
+      payAdoptDate: ZOHO_CANON_FIELDS.payAdoptDate.aliases,
+      recordNumber: ZOHO_CANON_FIELDS.recordNumber.aliases,
+    };
+
+    const dealsFieldMeta = await zohoApiGet("/crm/v8/settings/fields?module=Deals");
+    const dealsFields = dealsFieldMeta.fields || [];
+    const lookupModules = dealsFields
+      .filter(function (f) { return f.lookup && f.lookup.module; })
+      .map(function (f) {
+        return { dealsLookupApiName: f.api_name, dealsLookupLabel: f.field_label, module: f.lookup.module.api_name };
+      });
+
+    // De-dupe by module api_name (multiple Deals fields can point at the same module).
+    const seen = {};
+    const uniqueModules = lookupModules.filter(function (m) {
+      if (seen[m.module]) return false;
+      seen[m.module] = true;
+      return true;
+    });
+
+    const results = [];
+    for (const lm of uniqueModules) {
+      try {
+        const fm = await zohoApiGet("/crm/v8/settings/fields?module=" + encodeURIComponent(lm.module));
+        const fields = fm.fields || [];
+        const lookupBackToDeals = fields.find(function (f) {
+          return f.lookup && f.lookup.module && normHeaderServer(f.lookup.module.api_name) === "deals";
+        });
+        const matches = {};
+        Object.keys(targets).forEach(function (key) {
+          const aliases = targets[key];
+          const match = fields.find(function (f) {
+            return aliases.indexOf(normHeaderServer(f.field_label)) !== -1 || aliases.indexOf(normHeaderServer(f.api_name)) !== -1;
+          });
+          if (match) matches[key] = { api_name: match.api_name, field_label: match.field_label };
+        });
+        results.push({
+          module: lm.module,
+          dealsLookupField: lm.dealsLookupApiName,
+          totalFields: fields.length,
+          lookupBackToDealsField: lookupBackToDeals ? lookupBackToDeals.api_name : null,
+          matches: matches,
+        });
+      } catch (moduleErr) {
+        results.push({ module: lm.module, error: moduleErr.message });
+      }
+    }
+
+    res.json({ modulesChecked: uniqueModules.length, results: results });
+  } catch (err) {
+    console.error("[zoho] find-missing-fields failed:", err.message);
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
+  }
+});
+
 app.get("/api/zoho/deal-search-sample", requireAuth, async (req, res) => {
   try {
     const probe = "AS - 6244";
