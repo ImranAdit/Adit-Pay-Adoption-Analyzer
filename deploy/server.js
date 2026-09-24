@@ -1302,24 +1302,28 @@ const DEFAULT_AUDIT_RECORD_NUMBERS = ["AS - 6244", "AS - 6268", "AS - 6218", "AS
 async function computeScopeAudit(recordNumbers) {
   const wanted = new Set(recordNumbers.map(String));
 
-  const aditPay = await resolveAditPayModule();
-  if (!aditPay.found || !aditPay.lookupApiName) {
-    throw new Error("Could not resolve the Adit Pay module.");
+  // Record Number ("AS - ####") lives on the Adoption Scores module (its own
+  // auto-number "Name" field), not on Adit Pay ("AP - ####") -- confirmed via
+  // diagnostics after this audit originally returned 0/770 matches using the
+  // wrong module.
+  const adoptionScores = await resolveAdoptionScoresModule();
+  if (!adoptionScores.found || !adoptionScores.lookupApiName) {
+    throw new Error("Could not resolve the Adoption Scores module.");
   }
 
   const dealIdByRecordNumber = {};
   {
-    const fields = encodeURIComponent(["Name", aditPay.lookupApiName].join(","));
+    const fields = encodeURIComponent(["Name", adoptionScores.lookupApiName].join(","));
     let pageToken = null;
     for (let i = 0; i < 100; i++) {
-      let url = "/crm/v8/" + encodeURIComponent(aditPay.apiName) + "?fields=" + fields + "&per_page=200";
+      let url = "/crm/v8/" + encodeURIComponent(adoptionScores.apiName) + "?fields=" + fields + "&per_page=200";
       if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
       const data = await zohoApiGet(url);
       const records = data.data || [];
       records.forEach(function (rec) {
         const name = rec.Name;
         if (name != null && wanted.has(String(name))) {
-          const lookupVal = rec[aditPay.lookupApiName];
+          const lookupVal = rec[adoptionScores.lookupApiName];
           const dealId = lookupVal && typeof lookupVal === "object" ? lookupVal.id : lookupVal;
           if (dealId) dealIdByRecordNumber[String(name)] = dealId;
         }
@@ -1358,7 +1362,7 @@ async function computeScopeAudit(recordNumbers) {
   let matched = 0, rejected = 0, noDealFound = 0;
   recordNumbers.forEach(function (rn) {
     const dealId = dealIdByRecordNumber[String(rn)];
-    if (!dealId) { noDealFound++; results.push({ recordNumber: rn, error: "no matching Deal found via Adit Pay lookup" }); return; }
+    if (!dealId) { noDealFound++; results.push({ recordNumber: rn, error: "no matching Deal found via Adoption Scores lookup" }); return; }
     const f = scopeByDealId[dealId];
     if (!f) { noDealFound++; results.push({ recordNumber: rn, dealId: dealId, error: "deal id not found in Deals fetch" }); return; }
     const passes = dealMatchesTerminalPurchaseScope(f, now);
@@ -1394,7 +1398,6 @@ async function computeScopeAudit(recordNumbers) {
     notFoundSample: results.filter(function (r) { return r.error; }).slice(0, 10),
   };
 }
-
 app.post("/api/zoho/scope-audit", requireAuth, async (req, res) => {
   try {
     const recordNumbers = (req.body && req.body.recordNumbers) || [];
