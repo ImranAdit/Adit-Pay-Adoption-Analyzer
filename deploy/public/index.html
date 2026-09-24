@@ -543,6 +543,14 @@
 
 var ADOPT_THRESHOLD = 5000;
 
+// Adoption status now comes directly from the CRM's own "Pay Score" field
+// (Active / Adopted / Fail), not a locally recomputed volume threshold --
+// Zoho already classifies each deal and that classification is the source
+// of truth. ADOPT_THRESHOLD above is kept only for the existing "how much
+// more volume an Active deal needs" opportunity metrics, which are still
+// useful supplementary info and unrelated to the Adopted/Active split.
+function statusOf(r){ return r.payScore==="Adopted" ? "Adopted" : "Active"; }
+
 var CANON_FIELDS = {
   dealName:        {label:"Deal Name",              aliases:["dealname"], required:true},
   recordNumber:    {label:"Record Number",           aliases:["recordnumber","recordno","recordnum","record#"], required:true},
@@ -1287,7 +1295,7 @@ function resetFilters(){
 function debounce(fn,ms){ var t; return function(){ var a=arguments,ctx=this; clearTimeout(t); t=setTimeout(function(){fn.apply(ctx,a);}, ms||250); }; }
 
 function matchesFilters(r){
-  var status = r.aditPayVolume >= ADOPT_THRESHOLD ? "Adopted" : "Active";
+  var status = statusOf(r);
   if (!App.filters.adoptionStatus[status]) return false;
 
   var dateVal = r[App.filters.dateField];
@@ -1323,8 +1331,8 @@ function countActiveFilters(){
 /* ============================== aggregation ============================== */
 
 function aggregate(rows){
-  var adopted = rows.filter(function(r){ return r.aditPayVolume >= ADOPT_THRESHOLD; });
-  var active = rows.filter(function(r){ return r.aditPayVolume < ADOPT_THRESHOLD; });
+  var adopted = rows.filter(function(r){ return statusOf(r)==="Adopted"; });
+  var active = rows.filter(function(r){ return statusOf(r)!=="Adopted"; });
   var totalAdoptedVolume = sumBy(adopted,"aditPayVolume");
   var totalActiveVolume = sumBy(active,"aditPayVolume");
 
@@ -1951,7 +1959,7 @@ function exportExcel(){
 
   var dealHead = ["Deal Name","Record Number","Terminal Count","Package","Stage","Pay Status","Pay Score","Adit Pay Volume","Adoption Status","Volume Tier","Pay Adopt Date","Agreement Signed Date","CSM","CSM Pod","Tech OB","Potential Additional Volume"];
   var dealRows = getFilteredRows().map(function(r){
-    var status = r.aditPayVolume>=ADOPT_THRESHOLD?"Adopted":"Active";
+    var status = statusOf(r);
     var tier = findTier(r.aditPayVolume, status==="Adopted"?ADOPTED_TIERS:ACTIVE_TIERS).label;
     return [r.dealName, r.recordNumber, r.terminalCount, r.package, r.stage, r.payStatus, r.payScore,
       Number(r.aditPayVolume.toFixed(2)), status, tier,
@@ -1977,7 +1985,7 @@ function exportCsv(){
   var head = ["Deal Name","Record Number","Terminal Count","Package","Stage","Pay Status","Pay Score","Adit Pay Volume","Adoption Status","Volume Tier","Pay Adopt Date","Agreement Signed Date","CSM","CSM Pod","Tech OB","Potential Additional Volume"];
   var lines = [head.join(",")];
   getFilteredRows().forEach(function(r){
-    var status = r.aditPayVolume>=ADOPT_THRESHOLD?"Adopted":"Active";
+    var status = statusOf(r);
     var tier = findTier(r.aditPayVolume, status==="Adopted"?ADOPTED_TIERS:ACTIVE_TIERS).label;
     var vals = [r.dealName, r.recordNumber, r.terminalCount, r.package, r.stage, r.payStatus, r.payScore,
       r.aditPayVolume.toFixed(2), status, tier,
