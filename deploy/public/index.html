@@ -1796,8 +1796,20 @@ function renderOpportunity(agg){
 
 function openDrilldown(tier){
   var modal = document.getElementById("drilldownModal");
-  document.getElementById("drilldownTitle").textContent = tier.label + " — " + tier.count + " deal" + (tier.count===1?"":"s");
-  document.getElementById("drilldownBody").innerHTML = dealTableHTML(tier.members);
+  var members = tier.members;
+  var count = tier.count;
+  // The Active "$0" tier mixes Pay Score "Active" and "Fail" deals (see
+  // statusOf()). When opening its list, show only true "Active" pay-score
+  // deals so this drilldown isn't mixed with Fail deals. This only affects
+  // what's shown in this modal -- it does not touch agg.activeTiers, the
+  // Active Deals Summary table/totals, or any other section built from the
+  // combined active figure.
+  if (tier.label === "$0") {
+    members = members.filter(function(r){ return r.payScore !== "Fail"; });
+    count = members.length;
+  }
+  document.getElementById("drilldownTitle").textContent = tier.label + " — " + count + " deal" + (count===1?"":"s");
+  document.getElementById("drilldownBody").innerHTML = dealTableHTML(members);
   modal.hidden = false;
 }
 document.getElementById("drilldownClose").addEventListener("click", function(){ document.getElementById("drilldownModal").hidden = true; });
