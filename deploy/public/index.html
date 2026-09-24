@@ -213,6 +213,11 @@
     color:var(--amber); border-color:color-mix(in srgb, var(--amber) 30%, var(--line));
     box-shadow:inset 0 1px 1px rgba(255,255,255,.55), inset 0 -1px 2px rgba(184,112,47,.18), 0 1px 3px rgba(184,112,47,.12);
   }
+  .kpi-card.danger .kpi-icon{
+    background:linear-gradient(155deg, color-mix(in srgb, var(--danger-soft) 55%, white) 0%, var(--danger-soft) 55%, color-mix(in srgb, var(--danger-soft) 65%, var(--danger) 25%) 100%);
+    color:var(--danger); border-color:color-mix(in srgb, var(--danger) 30%, var(--line));
+    box-shadow:inset 0 1px 1px rgba(255,255,255,.55), inset 0 -1px 2px rgba(174,59,59,.18), 0 1px 3px rgba(174,59,59,.12);
+  }
   .kpi-body{display:flex; flex-direction:column; gap:7px;}
   .kpi-card .kpi-val{
     font-size:27px; font-weight:700; letter-spacing:-.01em; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; line-height:1.1;
@@ -222,11 +227,13 @@
   }
   .kpi-card.accent .kpi-val{ background:linear-gradient(180deg, color-mix(in srgb, var(--accent-strong) 78%, white 22%) 0%, var(--accent-strong) 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
   .kpi-card.amber .kpi-val{ background:linear-gradient(180deg, color-mix(in srgb, var(--amber) 78%, white 22%) 0%, var(--amber) 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .kpi-card.danger .kpi-val{ background:linear-gradient(180deg, color-mix(in srgb, var(--danger) 78%, white 22%) 0%, var(--danger) 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
   .kpi-card.kpi-primary .kpi-val{font-size:31px;}
   .kpi-card .kpi-sub{display:flex; align-items:center; gap:5px; font-size:12px; color:var(--ink-soft); line-height:1.35;}
   .kpi-trend{width:13px; height:13px; flex:none;}
   .kpi-card.accent .kpi-trend{color:var(--accent);}
   .kpi-card.amber .kpi-trend{color:var(--amber);}
+  .kpi-card.danger .kpi-trend{color:var(--danger);}
 
   /* narrative strip */
   .narrative{
@@ -1379,9 +1386,16 @@ function aggregate(rows){
     to5000: active.filter(function(r){return r.aditPayVolume>2500 && r.aditPayVolume<5000;}).length
   };
 
+  // Active vs Failed split (by Pay Score) for KPI cards/charts that want them
+  // shown separately, without changing agg.activeCount (still both combined,
+  // used elsewhere e.g. the narrative strip and the Active tier tables).
+  var failCount = active.filter(function(r){ return r.payScore==="Fail"; }).length;
+  var activeOnlyCount = active.length - failCount;
+
   return {
     total: total, adopted: adopted, active: active,
     adoptedCount: adopted.length, activeCount: active.length,
+    activeOnlyCount: activeOnlyCount, failCount: failCount,
     adoptionRate: total? adopted.length/total : 0,
     totalAdoptedVolume: totalAdoptedVolume, totalActiveVolume: totalActiveVolume,
     totalVolume: totalAdoptedVolume+totalActiveVolume,
@@ -1448,14 +1462,15 @@ var KPI_ICONS = {
   bill:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.4"/></svg>',
   bolt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 14h6l-1 8 9-13h-6l1-7Z"/></svg>',
   wallet:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h13A1.5 1.5 0 0 1 19 7.5V9h1.5A1.5 1.5 0 0 1 22 10.5v7A1.5 1.5 0 0 1 20.5 19h-16A1.5 1.5 0 0 1 3 17.5v-10Z"/><path d="M16 13.5h2"/></svg>',
-  bars:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>'
+  bars:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>',
+  alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 16.5h.01"/><path d="M10.6 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.4 3.9a2 2 0 0 0-3.4 0Z"/></svg>'
 };
 var KPI_TREND = {
   up:'<svg class="kpi-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16 10 10l4 4 6-8"/><path d="M14 6h6v6"/></svg>',
   warn:'<svg class="kpi-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 16.5h.01"/><path d="M10.6 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.4 3.9a2 2 0 0 0-3.4 0Z"/></svg>'
 };
 function kpiCard(label,val,sub,cls,icon,primary){
-  var trend = cls==="accent" ? KPI_TREND.up : (cls==="amber" ? KPI_TREND.warn : "");
+  var trend = cls==="accent" ? KPI_TREND.up : ((cls==="amber"||cls==="danger") ? KPI_TREND.warn : "");
   return '<div class="kpi-card '+(cls||"")+(primary?' kpi-primary':'')+'">'
     +'<div class="kpi-head"><div class="kpi-label">'+esc(label)+'</div><div class="kpi-icon">'+(KPI_ICONS[icon]||"")+'</div></div>'
     +'<div class="kpi-body"><div class="kpi-val">'+val+'</div>'+(sub?'<div class="kpi-sub">'+trend+'<span>'+sub+'</span></div>':'')+'</div>'
@@ -1467,7 +1482,8 @@ function renderKpis(agg){
   el.innerHTML =
     kpiCard("Total Terminal Deals", fmtInt(agg.total), "In current filter", "", "stack", true) +
     kpiCard("Adopted Deals", fmtInt(agg.adoptedCount), fmtPct(agg.adoptionRate)+" adoption rate", "accent", "check") +
-    kpiCard("Active Deals", fmtInt(agg.activeCount), fmtPct(agg.pctBelowThreshold)+" below $5,000 threshold", "amber", "pulse") +
+    kpiCard("Active Deals", fmtInt(agg.activeOnlyCount), fmtPct(agg.total? agg.activeOnlyCount/agg.total:0)+" below $5,000 threshold", "amber", "pulse") +
+    kpiCard("Failed Deals", fmtInt(agg.failCount), fmtPct(agg.total? agg.failCount/agg.total:0)+" below $5,000 threshold", "danger", "alert") +
     kpiCard("Adoption Rate", fmtPct(agg.adoptionRate), "Adopted ÷ total deals", "accent", "target", true) +
     kpiCard("Total Adopted Volume", fmtMoney0(agg.totalAdoptedVolume), "Sum of adopted Adit Pay Volume", "accent", "bill", true) +
     kpiCard("Active Volume", fmtMoney0(agg.totalActiveVolume), "Sum of active Adit Pay Volume", "amber", "bolt") +
