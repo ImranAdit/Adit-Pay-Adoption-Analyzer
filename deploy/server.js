@@ -1253,7 +1253,10 @@ app.get("/api/zoho/sync-debug", requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error("[zoho] sync-debug failed:", err.message);
-    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
+    // Diagnostic endpoint only: include the real (credential-free) error
+    // message and code so a genuine Zoho API error (rate limit, permission,
+    // bad field name, etc.) is visible instead of a generic guess.
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables.", debugMessage: err.message, debugCode: err.code || null });
   }
 });
 
