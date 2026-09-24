@@ -303,7 +303,7 @@ async function fetchDealsPages(fieldsParam, cvidParam, matchedKeys, fieldMap, sc
   // client.
   const scopeRows = [];
   const perPage = 200;
-  const maxPages = 100; // safety cap against a runaway loop
+  const maxPages = 2000; // safety cap against a runaway loop (raised from 100: the Deals module has more records than the old 100*200=20,000 ceiling covered, which was silently truncating the scan and undercounting real deals)
   let pageToken = null;
   for (let i = 0; i < maxPages; i++) {
     let url = "/crm/v8/Deals?fields=" + fieldsParam + "&per_page=" + perPage + cvidParam;
@@ -334,7 +334,7 @@ async function fetchJoinModuleById(moduleInfo, keys, fieldMap) {
   const joinFieldsParam = encodeURIComponent([moduleInfo.lookupApiName].concat(apiNames).join(","));
   const byDealId = {};
   const perPage = 200;
-  const maxPages = 100;
+  const maxPages = 2000;
   let pageToken = null;
   for (let i = 0; i < maxPages; i++) {
     let url = "/crm/v8/" + encodeURIComponent(moduleInfo.apiName) + "?fields=" + joinFieldsParam + "&per_page=" + perPage;
@@ -720,7 +720,7 @@ app.get("/api/zoho/aditpay-debug", requireAuth, async (req, res) => {
     let pageToken = null;
     const perPage = 200;
     const fetchFields = aditPay.lookupApiName ? ["id", aditPay.lookupApiName] : ["id"];
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 2000; i++) {
       let url = "/crm/v8/" + encodeURIComponent(aditPay.apiName) + "?fields=" + encodeURIComponent(fetchFields.join(",")) + "&per_page=" + perPage;
       if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
       const data = await zohoApiGet(url);
@@ -1065,7 +1065,7 @@ app.get("/api/zoho/scope-stats", requireAuth, async (req, res) => {
     };
     const stageCountsAmongRejected = {};
     const terminalsSelectedValuesAmongRejected = {};
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 2000; i++) {
       let url = "/crm/v8/Deals?fields=" + fields + "&per_page=200";
       if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
       const data = await zohoApiGet(url);
@@ -1139,7 +1139,7 @@ app.get("/api/zoho/scope-near-misses", requireAuth, async (req, res) => {
     const samples = {};
     condKeys.forEach(function (k) { totals[k] = 0; samples[k] = []; });
     let totalFetched = 0;
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 2000; i++) {
       let url = "/crm/v8/Deals?fields=" + fields + "&per_page=200";
       if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
       const data = await zohoApiGet(url);
@@ -1315,7 +1315,7 @@ async function computeScopeAudit(recordNumbers) {
   {
     const fields = encodeURIComponent(["Name", adoptionScores.lookupApiName].join(","));
     let pageToken = null;
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 2000; i++) {
       let url = "/crm/v8/" + encodeURIComponent(adoptionScores.apiName) + "?fields=" + fields + "&per_page=200";
       if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
       const data = await zohoApiGet(url);
@@ -1339,7 +1339,7 @@ async function computeScopeAudit(recordNumbers) {
     const neededIds = new Set(Object.values(dealIdByRecordNumber));
     const fields = encodeURIComponent(["id"].concat(Object.values(SCOPE_FILTER_FIELDS)).join(","));
     let pageToken = null;
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 2000; i++) {
       let url = "/crm/v8/Deals?fields=" + fields + "&per_page=200";
       if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
       const data = await zohoApiGet(url);
