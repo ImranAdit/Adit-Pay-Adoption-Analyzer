@@ -927,6 +927,66 @@ app.get("/api/zoho/scope-stats", requireAuth, async (req, res) => {
   }
 });
 
+// Diagnostic: pages through every Deal and isolates "near misses" -- deals
+// that fail EXACTLY ONE of the 7 report conditions -- since those are the
+// prime suspects for a subtle logic/data mismatch causing real qualifying
+// deals to be wrongly excluded. Returns per-condition totals plus a few raw
+// samples for each. Read-only; never returns credentials.
+app.get("/api/zoho/scope-near-misses", requireAuth, async (req, res) => {
+  try {
+    const fields = encodeURIComponent(Object.values(SCOPE_FILTER_FIELDS).join(","));
+    const now = new Date();
+    let pageToken = null;
+    const condKeys = ["cond1", "cond2", "cond3", "cond45", "cond6", "cond7"];
+    const totals = {};
+    const samples = {};
+    condKeys.forEach(function (k) { totals[k] = 0; samples[k] = []; });
+    let totalFetched = 0;
+    for (let i = 0; i < 100; i++) {
+      let url = "/crm/v8/Deals?fields=" + fields + "&per_page=200";
+      if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
+      const data = await zohoApiGet(url);
+      const records = data.data || [];
+      totalFetched += records.length;
+      records.forEach(function (rec) {
+        const f = {};
+        Object.keys(SCOPE_FILTER_FIELDS).forEach(function (k) { f[k] = flattenZohoValue(rec[SCOPE_FILTER_FIELDS[k]]); });
+        const cond1 = f.terminalsSelected === "Yes";
+        const cond2 = !(f.dealName && String(f.dealName).toLowerCase().indexOf("test") !== -1);
+        const cond3 = SCOPE_STAGE_ALLOWLIST.indexOf(f.stage) !== -1;
+        let cond4 = false, cond5 = false;
+        if (f.agreementSignedDate) {
+          const d = new Date(f.agreementSignedDate);
+          if (!isNaN(d.getTime())) {
+            const cutoff = new Date(now);
+            cutoff.setUTCMonth(cutoff.getUTCMonth() - 108);
+            cond4 = d >= cutoff && d <= now;
+            cond5 = d.getUTCFullYear() === now.getUTCFullYear() && d.getUTCMonth() === now.getUTCMonth();
+          }
+        }
+        const cond6 = f.terminalCount != null && Number(f.terminalCount) >= 1;
+        const cond7 = f.stage !== "Closed Lost";
+        const conds = { cond1: cond1, cond2: cond2, cond3: cond3, cond45: cond4 || cond5, cond6: cond6, cond7: cond7 };
+        const failed = condKeys.filter(function (k) { return !conds[k]; });
+        if (failed.length === 1) {
+          const key = failed[0];
+          totals[key]++;
+          if (samples[key].length < 6) {
+            samples[key].push({ id: rec.id, dealName: f.dealName, raw: f });
+          }
+        }
+      });
+      const more = data.info && data.info.more_records;
+      pageToken = data.info && data.info.next_page_token;
+      if (!more || !pageToken) break;
+    }
+    res.json({ totalFetched: totalFetched, nearMissTotals: totals, nearMissSamples: samples });
+  } catch (err) {
+    console.error("[zoho] scope-near-misses failed:", err.message);
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
+  }
+});
+
 app.get("/api/zoho/sync-debug", requireAuth, async (req, res) => {
   try {
     const result = await fetchZohoDealsAsRows();
