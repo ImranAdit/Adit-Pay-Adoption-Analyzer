@@ -1586,11 +1586,14 @@ function renderCharts(agg){
   // Monthly adoption trend (2026): count of deals whose Pay Adopt Date falls in
   // each calendar month of 2026, drawn from the currently filtered Adopted set
   // (agg.adopted) so it stays consistent with every other chart/KPI on the page.
+  // monthRows2026 keeps the actual deal rows per month (not just the count) so
+  // clicking a bar can open the same drilldown modal the tier charts use.
   var monthLabels2026 = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   var monthCounts2026 = new Array(12).fill(0);
+  var monthRows2026 = monthLabels2026.map(function(){ return []; });
   agg.adopted.forEach(function(r){
     var d = r.payAdoptDate;
-    if (d && d.getFullYear()===2026) monthCounts2026[d.getMonth()]++;
+    if (d && d.getFullYear()===2026) { monthCounts2026[d.getMonth()]++; monthRows2026[d.getMonth()].push(r); }
   });
   var mCtx = document.getElementById("chartAdoptedByMonth");
   if (mCtx) {
@@ -1603,7 +1606,13 @@ function renderCharts(agg){
       options:{ responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){ return fmtInt(c.parsed.y||c.parsed.x)+" adopted"; } } } },
         scales:{ x:{ grid:{display:false}, border:{display:false} },
-                 y:{ grid:{color:grid}, border:{display:false}, ticks:{precision:0} } } },
+                 y:{ grid:{color:grid}, border:{display:false}, ticks:{precision:0} } },
+        onHover:function(evt, els, chart){ chart.canvas.style.cursor = els.length ? "pointer" : "default"; },
+        onClick:function(evt, els){
+          if (!els.length) return;
+          var i = els[0].index;
+          openDrilldown({ label:monthLabels2026[i]+" 2026", count:monthRows2026[i].length, members:monthRows2026[i] });
+        } },
       plugins:[liftShadowPlugin("barLift-adoptedByMonth", 8, 3, .2)]
     });
   }
