@@ -868,6 +868,67 @@ app.get("/api/zoho/find-missing-fields", requireAuth, async (req, res) => {
   }
 });
 
+// Diagnostic/debugging helper: the previous find-missing-fields scan only
+// checked modules that Deals has an OUTGOING lookup field to -- but Adit_Pay
+// itself proves that pattern is incomplete: Deals has no lookup field to
+// Adit_Pay at all, only Adit_Pay has one pointing back to Deals (see
+// resolveAditPayModule above). So the true source of "Pay Score" (and "Pay
+// Status" / "Pay Adopt Date" / "Record Number") is likely a similar
+// one-directional module that never showed up in that scan. This instead
+// walks EVERY module in the CRM, checks each one's own fields for a lookup
+// back to Deals and for a field matching those canonical columns, and
+// reports only modules where either is true. Read-only; never returns
+// credentials.
+app.get("/api/zoho/find-missing-fields-v2", requireAuth, async (req, res) => {
+  try {
+    const targets = {
+      payScore: ZOHO_CANON_FIELDS.payScore.aliases,
+      payStatus: ZOHO_CANON_FIELDS.payStatus.aliases,
+      payAdoptDate: ZOHO_CANON_FIELDS.payAdoptDate.aliases,
+      recordNumber: ZOHO_CANON_FIELDS.recordNumber.aliases,
+    };
+
+    const modData = await zohoApiGet("/crm/v8/settings/modules");
+    const modules = (modData.modules || []).filter(function (m) { return m.api_name; });
+
+    const results = [];
+    const skipped = [];
+    for (const mod of modules) {
+      try {
+        const fm = await zohoApiGet("/crm/v8/settings/fields?module=" + encodeURIComponent(mod.api_name));
+        const fields = fm.fields || [];
+        const lookupToDeals = fields.find(function (f) {
+          return f.lookup && f.lookup.module && normHeaderServer(f.lookup.module.api_name) === "deals";
+        });
+        const matches = {};
+        Object.keys(targets).forEach(function (key) {
+          const aliases = targets[key];
+          const match = fields.find(function (f) {
+            return aliases.indexOf(normHeaderServer(f.field_label)) !== -1 || aliases.indexOf(normHeaderServer(f.api_name)) !== -1;
+          });
+          if (match) matches[key] = { api_name: match.api_name, field_label: match.field_label };
+        });
+        if (lookupToDeals || Object.keys(matches).length) {
+          results.push({
+            module: mod.api_name,
+            module_label: mod.plural_label || mod.module_name,
+            lookupToDealsField: lookupToDeals ? lookupToDeals.api_name : null,
+            totalFields: fields.length,
+            matches: matches,
+          });
+        }
+      } catch (moduleErr) {
+        skipped.push({ module: mod.api_name, error: moduleErr.message });
+      }
+    }
+
+    res.json({ modulesScanned: modules.length, relevantResults: results, skippedCount: skipped.length });
+  } catch (err) {
+    console.error("[zoho] find-missing-fields-v2 failed:", err.message);
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
+  }
+});
+
 app.get("/api/zoho/deal-search-sample", requireAuth, async (req, res) => {
   try {
     const probe = "AS - 6244";
