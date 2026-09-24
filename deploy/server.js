@@ -996,9 +996,11 @@ app.get("/api/zoho/sync-debug", requireAuth, async (req, res) => {
     const recIdx = headers.indexOf(ZOHO_CANON_FIELDS.recordNumber.label);
     const termIdx = headers.indexOf(ZOHO_CANON_FIELDS.terminalCount.label);
     const nameIdx = headers.indexOf(ZOHO_CANON_FIELDS.dealName.label);
+    const payScoreIdx = headers.indexOf(ZOHO_CANON_FIELDS.payScore.label);
 
     let blankRows = 0, blankVolume = 0, validVolume = 0, invalidVolume = 0, negativeVolume = 0;
     let blankRecordNumber = 0, blankTerminalCount = 0, blankDealName = 0;
+    const payScoreValueCounts = {};
     const invalidSamples = [];
     const negativeSamples = [];
 
@@ -1025,9 +1027,14 @@ app.get("/api/zoho/sync-debug", requireAuth, async (req, res) => {
       if (termRaw == null || String(termRaw).trim() === "") blankTerminalCount++;
       const nameRaw = nameIdx >= 0 ? row[nameIdx] : null;
       if (nameRaw == null || String(nameRaw).trim() === "") blankDealName++;
+      const payScoreRaw = payScoreIdx >= 0 ? row[payScoreIdx] : null;
+      const payScoreKey = (payScoreRaw == null || String(payScoreRaw).trim() === "") ? "(blank)" : String(payScoreRaw).trim();
+      payScoreValueCounts[payScoreKey] = (payScoreValueCounts[payScoreKey] || 0) + 1;
     });
 
     res.json({
+      headers: headers,
+      payScore: { columnFound: payScoreIdx >= 0, valueCounts: payScoreValueCounts },
       totalRowsFetched: rows.length,
       blankRows: blankRows,
       nonBlankRows: rows.length - blankRows,
