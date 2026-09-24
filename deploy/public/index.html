@@ -492,6 +492,14 @@
         </div>
       </section>
 
+      <section class="panel">
+        <p class="section-eyebrow">Trend</p>
+        <h2 style="margin-bottom:14px;">Monthly adoption trend (2026)</h2>
+        <div class="charts-grid">
+          <div class="chart-card" style="grid-column:1/-1;"><h3>Adopted deals by month</h3><p class="chart-sub">Count of deals adopted each month in 2026, by Pay Adopt Date</p><div class="chart-wrap"><canvas id="chartAdoptedByMonth"></canvas></div></div>
+        </div>
+      </section>
+
       <section class="panel" id="adoptedSummarySection"></section>
       <section class="panel" id="activeSummarySection"></section>
       <section class="panel" id="granularSection"></section>
@@ -1574,6 +1582,31 @@ function renderCharts(agg){
   mkBar("chartAdoptedTier", agg.adoptedTiers.map(function(t){return t.label;}), agg.adoptedTiers.map(function(t){return t.count;}), CHART_COLORS.adopted, "adopted", "count");
   mkBar("chartActiveTier", agg.activeTiers.map(function(t){return t.label;}), agg.activeTiers.map(function(t){return t.count;}), CHART_COLORS.active, "active", "count");
   mkBar("chartAdoptedVolume", agg.adoptedTiers.map(function(t){return t.label;}), agg.adoptedTiers.map(function(t){return t.volume;}), CHART_COLORS.adopted, "adoptedVol", "money");
+
+  // Monthly adoption trend (2026): count of deals whose Pay Adopt Date falls in
+  // each calendar month of 2026, drawn from the currently filtered Adopted set
+  // (agg.adopted) so it stays consistent with every other chart/KPI on the page.
+  var monthLabels2026 = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var monthCounts2026 = new Array(12).fill(0);
+  agg.adopted.forEach(function(r){
+    var d = r.payAdoptDate;
+    if (d && d.getFullYear()===2026) monthCounts2026[d.getMonth()]++;
+  });
+  var mCtx = document.getElementById("chartAdoptedByMonth");
+  if (mCtx) {
+    App.charts.adoptedByMonth = new Chart(mCtx, {
+      type:"bar",
+      data:{ labels:monthLabels2026, datasets:[{ data:monthCounts2026,
+        backgroundColor: function(c){ return verticalMetalGradient(c.chart, CHART_COLORS.adopted); },
+        borderColor:CHART_COLORS.adopted, borderWidth:1.5, borderRadius:8, maxBarThickness:34,
+        hoverBackgroundColor: function(c){ return verticalMetalGradient(c.chart, shadeHex(CHART_COLORS.adopted,.15)); } }]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){ return fmtInt(c.parsed.y||c.parsed.x)+" adopted"; } } } },
+        scales:{ x:{ grid:{display:false}, border:{display:false} },
+                 y:{ grid:{color:grid}, border:{display:false}, ticks:{precision:0} } } },
+      plugins:[liftShadowPlugin("barLift-adoptedByMonth", 8, 3, .2)]
+    });
+  }
 
   var funnelBaseColors = ["#9a988f", CHART_COLORS.active, CHART_COLORS.adopted];
   var fCtx = document.getElementById("chartFunnel");
