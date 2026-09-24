@@ -1617,12 +1617,19 @@ function renderCharts(agg){
     });
   }
 
-  var funnelBaseColors = ["#9a988f", CHART_COLORS.active, CHART_COLORS.adopted];
+  // Split the existing Active bucket (agg.active, which already includes
+  // both Pay Score "Active" and "Fail" deals -- see statusOf()) purely for
+  // this chart's display, without touching agg.activeCount or any other
+  // KPI/table that relies on the combined "Active Deals" figure elsewhere.
+  var failCount = agg.active.filter(function(r){ return r.payScore==="Fail"; }).length;
+  var activeOnlyCount = agg.activeCount - failCount;
+
+  var funnelBaseColors = ["#9a988f", CHART_COLORS.active, CHART_COLORS.danger, CHART_COLORS.adopted];
   var fCtx = document.getElementById("chartFunnel");
   App.charts.funnel = new Chart(fCtx, {
     type:"bar",
-    data:{ labels:["Total Terminal Deals","Active Deals","Adopted Deals"],
-      datasets:[{ data:[agg.total, agg.activeCount, agg.adoptedCount],
+    data:{ labels:["Total Terminal Deals","Active Deals","Failed Deals","Adopted Deals"],
+      datasets:[{ data:[agg.total, activeOnlyCount, failCount, agg.adoptedCount],
         backgroundColor:function(c){ return horizontalMetalGradient(c.chart, funnelBaseColors[c.dataIndex]); },
         borderColor:funnelBaseColors, borderWidth:1.5, borderRadius:8 }]},
     options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
