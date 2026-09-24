@@ -1364,8 +1364,18 @@ function aggregate(rows){
     });
   }
 
+  // Active vs Failed split (by Pay Score) -- see statusOf(). Every "Fail"
+  // deal has $0 Adit Pay Volume, so excluding Fail deals only ever changes
+  // the "$0" active tier/bucket; every other active tier/bucket, and the
+  // Active Volume figures (all $0 for Fail deals), are unaffected either way.
+  // agg.activeCount / agg.active stay the combined Active+Fail figure for
+  // anything that still needs it (e.g. the narrative strip).
+  var failCount = active.filter(function(r){ return r.payScore==="Fail"; }).length;
+  var activeOnlyCount = active.length - failCount;
+  var activeOnly = active.filter(function(r){ return r.payScore!=="Fail"; });
+
   var adoptedTiers = tierize(adopted, ADOPTED_TIERS, adopted.length);
-  var activeTiers = tierize(active, ACTIVE_TIERS, active.length);
+  var activeTiers = tierize(activeOnly, ACTIVE_TIERS, activeOnly.length);
   var granularTiers = tierize(adopted, GRANULAR_TIERS, adopted.length);
 
   var total = rows.length;
@@ -1374,23 +1384,17 @@ function aggregate(rows){
 
   var potentialVolumeOpportunity = sumBy(active, function(r){ return ADOPT_THRESHOLD - r.aditPayVolume; });
 
-  var near = active.filter(function(r){ return r.aditPayVolume > 4000; }).length;
-  var mid = active.filter(function(r){ return r.aditPayVolume > 2500 && r.aditPayVolume <= 4000; }).length;
-  var low = active.filter(function(r){ return r.aditPayVolume <= 2500; }).length;
+  var near = activeOnly.filter(function(r){ return r.aditPayVolume > 4000; }).length;
+  var mid = activeOnly.filter(function(r){ return r.aditPayVolume > 2500 && r.aditPayVolume <= 4000; }).length;
+  var low = activeOnly.filter(function(r){ return r.aditPayVolume <= 2500; }).length;
 
   var activeBuckets = {
-    at0: active.filter(function(r){return r.aditPayVolume===0;}).length,
-    to500: active.filter(function(r){return r.aditPayVolume>0 && r.aditPayVolume<=500;}).length,
-    to1000: active.filter(function(r){return r.aditPayVolume>500 && r.aditPayVolume<=1000;}).length,
-    to2500: active.filter(function(r){return r.aditPayVolume>1000 && r.aditPayVolume<=2500;}).length,
-    to5000: active.filter(function(r){return r.aditPayVolume>2500 && r.aditPayVolume<5000;}).length
+    at0: activeOnly.filter(function(r){return r.aditPayVolume===0;}).length,
+    to500: activeOnly.filter(function(r){return r.aditPayVolume>0 && r.aditPayVolume<=500;}).length,
+    to1000: activeOnly.filter(function(r){return r.aditPayVolume>500 && r.aditPayVolume<=1000;}).length,
+    to2500: activeOnly.filter(function(r){return r.aditPayVolume>1000 && r.aditPayVolume<=2500;}).length,
+    to5000: activeOnly.filter(function(r){return r.aditPayVolume>2500 && r.aditPayVolume<5000;}).length
   };
-
-  // Active vs Failed split (by Pay Score) for KPI cards/charts that want them
-  // shown separately, without changing agg.activeCount (still both combined,
-  // used elsewhere e.g. the narrative strip and the Active tier tables).
-  var failCount = active.filter(function(r){ return r.payScore==="Fail"; }).length;
-  var activeOnlyCount = active.length - failCount;
 
   return {
     total: total, adopted: adopted, active: active,
@@ -1408,21 +1412,21 @@ function aggregate(rows){
       potentialVolumeOpportunity: potentialVolumeOpportunity
     },
     activeAnalysis: {
-      count: active.length, volume: totalActiveVolume,
-      pctOfDeals: total? active.length/total : 0,
+      count: activeOnlyCount, volume: totalActiveVolume,
+      pctOfDeals: total? activeOnlyCount/total : 0,
       pctOfVolume: (totalAdoptedVolume+totalActiveVolume)? totalActiveVolume/(totalAdoptedVolume+totalActiveVolume) : 0,
       buckets: activeBuckets, near:near, mid:mid, low:low
     },
-    reconciliation: buildReconciliation(adopted, active, total, adoptedTiers, activeTiers, granularTiers, totalAdoptedVolume, totalActiveVolume)
+    reconciliation: buildReconciliation(adopted, active, total, adoptedTiers, activeTiers, granularTiers, totalAdoptedVolume, totalActiveVolume, activeOnlyCount)
   };
 }
 function sumBy(arr,keyOrFn){ var fn = typeof keyOrFn==="function"?keyOrFn:function(r){return r[keyOrFn];}; return arr.reduce(function(a,r){return a+(fn(r)||0);},0); }
 
-function buildReconciliation(adopted,active,total,adoptedTiers,activeTiers,granularTiers,totalAdoptedVolume,totalActiveVolume){
+function buildReconciliation(adopted,active,total,adoptedTiers,activeTiers,granularTiers,totalAdoptedVolume,totalActiveVolume,activeOnlyCount){
   var checks = [];
   checks.push({name:"Adopted + Active = Total Terminal Deals", pass: (adopted.length+active.length)===total});
   checks.push({name:"Sum of Adopted tier counts = Total Adopted Deals", pass: sumBy(adoptedTiers,"count")===adopted.length});
-  checks.push({name:"Sum of Active tier counts = Total Active Deals", pass: sumBy(activeTiers,"count")===active.length});
+  checks.push({name:"Sum of Active tier counts = Total Active Deals", pass: sumBy(activeTiers,"count")===activeOnlyCount});
   checks.push({name:"Sum of Adopted tier volume = Total Adopted Volume", pass: centsEq(sumBy(adoptedTiers,"volume"), totalAdoptedVolume)});
   checks.push({name:"Sum of Active tier volume = Total Active Volume", pass: centsEq(sumBy(activeTiers,"volume"), totalActiveVolume)});
   checks.push({name:"Granular adopted tier counts = Total Adopted Deals", pass: sumBy(granularTiers,"count")===adopted.length});
@@ -1735,7 +1739,7 @@ function renderAdoptedSection(agg){
 }
 function renderActiveSection(agg){
   var el = document.getElementById("activeSummarySection");
-  el.innerHTML = tierTableHTML("2. Active Deals Summary", "Active Deals &nbsp;|&nbsp; &lt; $5,000 Volume", agg.activeTiers, agg.activeCount, agg.totalActiveVolume, {kind:"active", pctLabel:"Active", showCumulative:true});
+  el.innerHTML = tierTableHTML("2. Active Deals Summary", "Active Deals &nbsp;|&nbsp; &lt; $5,000 Volume", agg.activeTiers, agg.activeOnlyCount, agg.totalActiveVolume, {kind:"active", pctLabel:"Active", showCumulative:true});
   el.querySelectorAll("td.clickable").forEach(function(td){
     td.addEventListener("click", function(){ openDrilldown(agg.activeTiers[Number(td.getAttribute("data-tier-idx"))]); });
   });
@@ -2027,7 +2031,7 @@ function exportExcel(){
   ), "Adopted Summary");
 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
-    tierSheetAoA("2. Active Deals Summary","Active Deals | < $5,000 Volume", agg.activeTiers, agg.activeCount, agg.totalActiveVolume, true, "Active")
+    tierSheetAoA("2. Active Deals Summary","Active Deals | < $5,000 Volume", agg.activeTiers, agg.activeOnlyCount, agg.totalActiveVolume, true, "Active")
   ), "Active Summary");
 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
