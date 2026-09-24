@@ -1501,7 +1501,9 @@ function renderNarrative(agg){
   var near = agg.activeAnalysis.near;
   el.innerHTML =
     "<strong>"+fmtPct(agg.adoptionRate,1)+"</strong> of "+fmtInt(agg.total)+" terminal deals have adopted Adit Pay, processing <strong>"+fmtMoney0(agg.totalAdoptedVolume)+"</strong> in volume. "+
-    "<span class=\"n-amber\">"+fmtInt(agg.activeCount)+" deals</span> remain active below the $5,000 threshold"+
+    // agg.activeOnlyCount excludes Pay Score "Fail" deals, consistent with the
+    // Active Deals KPI card / Active Deals Summary table / funnel chart.
+    "<span class=\"n-amber\">"+fmtInt(agg.activeOnlyCount)+" deals</span> remain active below the $5,000 threshold"+
     (near ? ", including "+near+" within $1,000 of adopting" : "")+".";
 }
 
