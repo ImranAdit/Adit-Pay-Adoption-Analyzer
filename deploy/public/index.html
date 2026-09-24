@@ -616,8 +616,9 @@ var ACTIVE_TIERS = [
 ];
 
 var GRANULAR_TIERS = [
-  centsRange("$5,000 - $7,500", 5000, 7500),
-  centsRange("$7,501 - $10,000", 7500.01, 10000),
+  // $5,000-$7,500 and $7,501-$10,000 are intentionally NOT repeated here --
+  // they're already shown, identically, in "1. Adopted Deals Summary" above.
+  // This table adds detail only for the $10,000-$30,000 band.
   centsRange("$10,001 - $12,500", 10000.01, 12500),
   centsRange("$12,501 - $15,000", 12500.01, 15000),
   centsRange("$15,001 - $17,500", 15000.01, 17500),
@@ -1429,7 +1430,6 @@ function buildReconciliation(adopted,active,total,adoptedTiers,activeTiers,granu
   checks.push({name:"Sum of Active tier counts = Total Active Deals", pass: sumBy(activeTiers,"count")===activeOnlyCount});
   checks.push({name:"Sum of Adopted tier volume = Total Adopted Volume", pass: centsEq(sumBy(adoptedTiers,"volume"), totalAdoptedVolume)});
   checks.push({name:"Sum of Active tier volume = Total Active Volume", pass: centsEq(sumBy(activeTiers,"volume"), totalActiveVolume)});
-  checks.push({name:"Granular adopted tier counts = Total Adopted Deals", pass: sumBy(granularTiers,"count")===adopted.length});
   return checks;
 }
 function centsEq(a,b){ return Math.round(a*100)===Math.round(b*100); }
@@ -1717,6 +1717,10 @@ function tierTableHTML(title, subtitle, tiers, totalCount, totalVolume, opts){
       "<td>"+fmtMoney0(t.volume)+"</td>"+
       "</tr>";
   }).join("");
+  // Sum of each row's own "% of X" rather than a hardcoded 100% -- correct
+  // both when the tiers fully partition totalCount (sums to 100%, as before)
+  // and when they cover only a subset of it (e.g. the granular $10k-$30k table).
+  var footerPct = tiers.reduce(function(a,t){ return a + t.pct; }, 0);
   return '<p class="section-eyebrow">Executive summary</p>'+
     "<h2>"+esc(title)+"</h2>"+
     '<p class="panel-sub">'+subtitle+"</p>"+
@@ -1724,7 +1728,7 @@ function tierTableHTML(title, subtitle, tiers, totalCount, totalVolume, opts){
     "<th>Volume Range</th><th>Deal Count</th><th>% of "+esc(opts.pctLabel)+"</th>"+
     (opts.showCumulative? "<th>Cumulative Count</th>":"")+
     "<th>Total Tier Volume</th></tr></thead><tbody>"+rows+"</tbody>"+
-    "<tfoot><tr><td>Total</td><td>"+fmtInt(totalCount)+"</td><td>100%</td>"+
+    "<tfoot><tr><td>Total</td><td>"+fmtInt(totalCount)+"</td><td>"+fmtPct(footerPct)+"</td>"+
     (opts.showCumulative? "<td>"+fmtInt(totalCount)+"</td>":"")+
     "<td>"+fmtMoney0(totalVolume)+"</td></tr></tfoot></table></div>"+
     '<p style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;">Click any volume range to view the underlying deals.</p>';
@@ -1746,7 +1750,11 @@ function renderActiveSection(agg){
 }
 function renderGranularSection(agg){
   var el = document.getElementById("granularSection");
-  el.innerHTML = tierTableHTML("3. Adopted Deals — Granular $2,500 Steps", "Detailed visibility into adoption between $5,000 and $30,000", agg.granularTiers, agg.adoptedCount, agg.totalAdoptedVolume, {kind:"granular", pctLabel:"Adopted", showCumulative:false});
+  // Totals reflect only the rows this table actually shows ($10,000-$30,000) --
+  // see table 1 for the $5,000-$10,000 slice, already shown there.
+  var granularShownCount = sumBy(agg.granularTiers, "count");
+  var granularShownVolume = sumBy(agg.granularTiers, "volume");
+  el.innerHTML = tierTableHTML("3. Adopted Deals — Granular $2,500 Steps", "Detailed visibility into adoption between $10,000 and $30,000 (see table 1 above for $5,000–$10,000)", agg.granularTiers, granularShownCount, granularShownVolume, {kind:"granular", pctLabel:"Adopted", showCumulative:false});
   el.querySelectorAll("td.clickable").forEach(function(td){
     td.addEventListener("click", function(){ openDrilldown(agg.granularTiers[Number(td.getAttribute("data-tier-idx"))]); });
   });
@@ -2035,7 +2043,7 @@ function exportExcel(){
   ), "Active Summary");
 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
-    tierSheetAoA("3. Adopted Deals - Granular $2,500 Steps","", agg.granularTiers, agg.adoptedCount, agg.totalAdoptedVolume, false, "Adopted")
+    tierSheetAoA("3. Adopted Deals - Granular $2,500 Steps","", agg.granularTiers, sumBy(agg.granularTiers,"count"), sumBy(agg.granularTiers,"volume"), false, "Adopted")
   ), "Granular Adoption");
 
   var dealHead = ["Deal Name","Record Number","Terminal Count","Package","Stage","Pay Status","Pay Score","Adit Pay Volume","Adoption Status","Volume Tier","Pay Adopt Date","Agreement Signed Date","CSM","CSM Pod","Tech OB","Potential Additional Volume"];
