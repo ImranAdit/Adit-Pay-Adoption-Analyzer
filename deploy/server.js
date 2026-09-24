@@ -192,10 +192,44 @@ async function resolveAditPayModule() {
   return aditPayModuleCache;
 }
 
+// Discovers the "Adoption Scores" Zoho module the same way -- it's the
+// authoritative source for "Pay Score", "Pay Status", "Pay Adopt Date", and
+// the true "Record Number" (its own auto-number "Name" field, prefixed
+// "AS-..."). Confirmed via diagnostics: none of these four live on Deals or
+// on the Adit Pay module itself, only here. Cached the same way.
+let adoptionScoresModuleCache = null;
+async function resolveAdoptionScoresModule() {
+  if (adoptionScoresModuleCache) return adoptionScoresModuleCache;
+  const modData = await zohoApiGet("/crm/v8/settings/modules");
+  const modules = modData.modules || [];
+  const match = modules.find(function (m) {
+    return ["module_name", "api_name", "plural_label", "singular_label"].some(function (prop) {
+      return normHeaderServer(m[prop]).indexOf("adoptionscore") !== -1;
+    });
+  });
+  if (!match) {
+    adoptionScoresModuleCache = { found: false };
+    return adoptionScoresModuleCache;
+  }
+  const apiName = match.api_name;
+  const fieldMeta = await zohoApiGet("/crm/v8/settings/fields?module=" + encodeURIComponent(apiName));
+  const allFields = fieldMeta.fields || [];
+  const lookupField = allFields.find(function (f) {
+    return f.lookup && f.lookup.module && normHeaderServer(f.lookup.module.api_name) === "deals";
+  });
+  adoptionScoresModuleCache = {
+    found: true,
+    apiName: apiName,
+    fields: allFields,
+    lookupApiName: lookupField ? lookupField.api_name : null,
+  };
+  return adoptionScoresModuleCache;
+}
+
 // Pages through every Deal record for the given field selection, following
 // Zoho's cursor-based next_page_token (no record-count ceiling, unlike the
 // classic offset "page" pagination). Split out so it can run concurrently
-// with fetchAditPayById() below instead of after it.
+// with fetchJoinModuleById() below instead of after it.
 // --- Business-rule scope filter -------------------------------------------
 // The Deals module is the company's entire pipeline (~20,000 records: every
 // lead, prospect, and deal ever created), not just deals that actually
@@ -215,7 +249,7 @@ async function resolveAditPayModule() {
 //   7. Stage isn't Closed Lost
 //
 // Conditions 4/5 are relative to "now", so this is re-evaluated fresh on
-// every sync rather than being a fixed snapshot — the qualifying set will
+// every sync rather than being a fixed snapshot â the qualifying set will
 // drift over time exactly as the Zoho report's own results do.
 const SCOPE_FILTER_FIELDS = {
   terminalsSelected: "Terminals_Selected",
@@ -264,7 +298,7 @@ async function fetchDealsPages(fieldsParam, cvidParam, matchedKeys, fieldMap, sc
   const rows = [];
   const dealIds = [];
   // Raw values (per the same field set as SCOPE_FILTER_FIELDS) for every
-  // fetched deal, aligned by index with rows/dealIds — used only to decide
+  // fetched deal, aligned by index with rows/dealIds â used only to decide
   // which deals pass dealMatchesTerminalPurchaseScope, never shown to the
   // client.
   const scopeRows = [];
@@ -290,54 +324,56 @@ async function fetchDealsPages(fieldsParam, cvidParam, matchedKeys, fieldMap, sc
   return { rows: rows, dealIds: dealIds, scopeRows: scopeRows };
 }
 
-// Pages through every Adit Pay module record, keyed by the Deal id it looks
-// up to, so rows can be joined to it by dealId after both fetches finish.
-// Split out so it can run concurrently with fetchDealsPages() above.
-async function fetchAditPayById(aditPay, aditPayKeys, aditPayFieldMap) {
-  const aditPayApiNames = aditPayKeys.map(function (k) { return aditPayFieldMap[k]; });
-  const joinFieldsParam = encodeURIComponent([aditPay.lookupApiName].concat(aditPayApiNames).join(","));
+// Pages through every record of a related module (Adit Pay, Adoption
+// Scores, ...), keyed by the Deal id it looks up to, so rows can be joined
+// to it by dealId after both fetches finish. Generalized so it can be used
+// for more than one related module â split out so each can run concurrently
+// with fetchDealsPages() above rather than after it.
+async function fetchJoinModuleById(moduleInfo, keys, fieldMap) {
+  const apiNames = keys.map(function (k) { return fieldMap[k]; });
+  const joinFieldsParam = encodeURIComponent([moduleInfo.lookupApiName].concat(apiNames).join(","));
   const byDealId = {};
   const perPage = 200;
   const maxPages = 100;
-  let apPageToken = null;
+  let pageToken = null;
   for (let i = 0; i < maxPages; i++) {
-    let url = "/crm/v8/" + encodeURIComponent(aditPay.apiName) + "?fields=" + joinFieldsParam + "&per_page=" + perPage;
-    if (apPageToken) url += "&page_token=" + encodeURIComponent(apPageToken);
+    let url = "/crm/v8/" + encodeURIComponent(moduleInfo.apiName) + "?fields=" + joinFieldsParam + "&per_page=" + perPage;
+    if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
     const data = await zohoApiGet(url);
     const records = data.data || [];
     records.forEach(function (rec) {
-      const lookupVal = rec[aditPay.lookupApiName];
+      const lookupVal = rec[moduleInfo.lookupApiName];
       const dealId = lookupVal && typeof lookupVal === "object" ? lookupVal.id : lookupVal;
       if (!dealId) return;
-      byDealId[dealId] = aditPayKeys.map(function (k) { return flattenZohoValue(rec[aditPayFieldMap[k]]); });
+      byDealId[dealId] = keys.map(function (k) { return flattenZohoValue(rec[fieldMap[k]]); });
     });
     const more = data.info && data.info.more_records;
-    apPageToken = data.info && data.info.next_page_token;
-    if (!more || !apPageToken) break;
+    pageToken = data.info && data.info.next_page_token;
+    if (!more || !pageToken) break;
   }
   return byDealId;
 }
 
-// Builds { headers, rows } — an AOA (header row + data rows) shaped exactly
-// like a parsed spreadsheet — by matching Zoho field labels/api names against
+// Builds { headers, rows } â an AOA (header row + data rows) shaped exactly
+// like a parsed spreadsheet â by matching Zoho field labels/api names against
 // ZOHO_CANON_FIELDS, then paging through every Deal record.
 //
-// Two of the canonical columns ("Record Number", "Adit Pay Volume") don't
-// exist on the Deals module itself — they live on a separate, related "Adit
-// Pay" module. Any canonical key that doesn't match a Deals field is looked
-// up there instead (resolveAditPayModule, above) and joined in by deal id.
-// "Record Number" is always the Adit Pay module's own system "Name" field
-// (its built-in auto-number/record-name field), so that one is mapped
-// directly rather than alias-matched. If the Adit Pay module or its lookup
-// field back to Deals can't be found, those columns are left out of the
-// output entirely (not faked with blank values) so the client's existing
-// "missing required columns" screen reports them accurately.
+// Several canonical columns don't exist on the Deals module itself â they
+// live on separate, related modules. "Adit Pay Volume" is typically a
+// Deals-side rollup, but "Pay Score", "Pay Status", "Pay Adopt Date", and
+// the true "Record Number" live on the "Adoption Scores" module (confirmed
+// via diagnostics), joined back to Deals by its own lookup field. The Adit
+// Pay module is tried as a fallback for anything Adoption Scores doesn't
+// have. If neither module (or its lookup field back to Deals) can be found,
+// those columns are left out of the output entirely (not faked with blank
+// values) so the client's existing "missing required columns" screen
+// reports them accurately.
 //
-// The Deals pagination and the Adit Pay pagination are independent of one
-// another, so they run concurrently via Promise.all() rather than one after
-// the other — this roughly halves total sync time whenever both are needed,
-// which matters most while ZOHO_DEALS_CVID is left unconfigured and the
-// Deals pull covers the company's full, unfiltered pipeline.
+// The Deals pagination and each related-module pagination are independent
+// of one another, so they all run concurrently via Promise.all() rather
+// than sequentially â this cuts total sync time whenever multiple joins are
+// needed, which matters most while ZOHO_DEALS_CVID is left unconfigured and
+// the Deals pull covers the company's full, unfiltered pipeline.
 async function fetchZohoDealsAsRows() {
   const fieldMeta = await zohoApiGet("/crm/v8/settings/fields?module=Deals");
   const allFields = fieldMeta.fields || [];
@@ -352,25 +388,43 @@ async function fetchZohoDealsAsRows() {
   });
 
   const unmatchedKeys = Object.keys(ZOHO_CANON_FIELDS).filter(function (k) { return !fieldMap[k]; });
+
+  // Try the Adoption Scores module first â it's the authoritative source for
+  // Pay Score / Pay Status / Pay Adopt Date / the true Record Number.
+  let adoptionScores = { found: false };
+  const adoptionScoresFieldMap = {}; // canonKey -> api_name (on the Adoption Scores module)
+  if (unmatchedKeys.length) {
+    try {
+      adoptionScores = await resolveAdoptionScoresModule();
+    } catch (e) {
+      console.warn("[zoho] Could not resolve the Adoption Scores module:", e.message);
+    }
+    if (adoptionScores.found && adoptionScores.lookupApiName) {
+      unmatchedKeys.forEach(function (key) {
+        const aliases = ZOHO_CANON_FIELDS[key].aliases;
+        const match = adoptionScores.fields.find(function (f) {
+          return aliases.indexOf(normHeaderServer(f.field_label)) !== -1 || aliases.indexOf(normHeaderServer(f.api_name)) !== -1;
+        });
+        if (match) adoptionScoresFieldMap[key] = match.api_name;
+      });
+    } else {
+      console.warn("[zoho] Adoption Scores module or its lookup field to Deals could not be resolved â " + unmatchedKeys.join(", ") + " will be attempted via the Adit Pay module instead.");
+    }
+  }
+
+  // Whatever Adoption Scores didn't cover, fall back to the Adit Pay module
+  // (kept for backward compatibility â e.g. if a field ever moves).
+  const stillUnmatchedKeys = unmatchedKeys.filter(function (k) { return !adoptionScoresFieldMap[k]; });
   let aditPay = { found: false };
   const aditPayFieldMap = {}; // canonKey -> api_name (on the Adit Pay module)
-  if (unmatchedKeys.length) {
+  if (stillUnmatchedKeys.length) {
     try {
       aditPay = await resolveAditPayModule();
     } catch (e) {
       console.warn("[zoho] Could not resolve the Adit Pay module:", e.message);
     }
-    // Only attempt these columns when we can both find the module AND find its
-    // lookup field back to Deals — otherwise there is no reliable way to join
-    // rows, and reporting a header we can't actually populate would make the
-    // client's column-mapping think the data is present when it isn't.
     if (aditPay.found && aditPay.lookupApiName) {
-      unmatchedKeys.forEach(function (key) {
-        if (key === "recordNumber") {
-          const nameField = aditPay.fields.find(function (f) { return f.api_name === "Name"; });
-          if (nameField) aditPayFieldMap[key] = "Name";
-          return;
-        }
+      stillUnmatchedKeys.forEach(function (key) {
         const aliases = ZOHO_CANON_FIELDS[key].aliases;
         const match = aditPay.fields.find(function (f) {
           return aliases.indexOf(normHeaderServer(f.field_label)) !== -1 || aliases.indexOf(normHeaderServer(f.api_name)) !== -1;
@@ -378,13 +432,14 @@ async function fetchZohoDealsAsRows() {
         if (match) aditPayFieldMap[key] = match.api_name;
       });
     } else {
-      console.warn("[zoho] Adit Pay module or its lookup field to Deals could not be resolved — " + unmatchedKeys.join(", ") + " will be reported as missing.");
+      console.warn("[zoho] Adit Pay module or its lookup field to Deals could not be resolved â " + stillUnmatchedKeys.join(", ") + " will be reported as missing.");
     }
   }
 
   const matchedKeys = Object.keys(fieldMap);
+  const adoptionScoresKeys = Object.keys(adoptionScoresFieldMap);
   const aditPayKeys = Object.keys(aditPayFieldMap);
-  if (!matchedKeys.length && !aditPayKeys.length) {
+  if (!matchedKeys.length && !adoptionScoresKeys.length && !aditPayKeys.length) {
     const err = new Error("No matching fields found in the Zoho Deals module for the analyzer's expected columns.");
     err.code = "NO_FIELD_MATCH";
     throw err;
@@ -402,7 +457,7 @@ async function fetchZohoDealsAsRows() {
   const fieldsParam = encodeURIComponent(apiNames.join(","));
 
   // Zoho's classic "page" (offset) pagination is capped at the first 2000
-  // records ("DISCRETE_PAGINATION_LIMIT_EXCEEDED" past that) — deal counts
+  // records ("DISCRETE_PAGINATION_LIMIT_EXCEEDED" past that) â deal counts
   // routinely exceed that, so this uses cursor-based pagination instead:
   // no "page" param at all, just follow info.next_page_token until Zoho
   // says there's nothing left. This has no such record-count ceiling.
@@ -416,27 +471,33 @@ async function fetchZohoDealsAsRows() {
   const cvidParam = ZOHO_DEALS_CVID ? "&cvid=" + encodeURIComponent(ZOHO_DEALS_CVID) : "";
 
   const dealsPromise = fetchDealsPages(fieldsParam, cvidParam, matchedKeys, fieldMap, SCOPE_FILTER_FIELDS);
-  // A failure fetching the Adit Pay module's own records (e.g. an OAuth scope
+  // A failure fetching a related module's own records (e.g. an OAuth scope
   // mismatch specific to that module, distinct from the scopes Deals needs)
-  // must not sink the whole sync — the Deals data can still be perfectly
-  // good on its own. Caught here and treated like "module not found": these
-  // two columns are dropped from the output, not faked, so the client's
+  // must not sink the whole sync â the Deals data can still be perfectly
+  // good on its own. Caught here and treated like "module not found": those
+  // columns are dropped from the output, not faked, so the client's
   // existing "missing required columns" screen still reports them honestly.
+  const adoptionScoresPromise = adoptionScoresKeys.length
+    ? fetchJoinModuleById(adoptionScores, adoptionScoresKeys, adoptionScoresFieldMap).catch(function (e) {
+        console.warn("[zoho] Could not fetch Adoption Scores records (" + e.message + ") â " + adoptionScoresKeys.join(", ") + " will be reported as missing.");
+        return null;
+      })
+    : Promise.resolve(null);
   const aditPayPromise = aditPayKeys.length
-    ? fetchAditPayById(aditPay, aditPayKeys, aditPayFieldMap).catch(function (e) {
-        console.warn("[zoho] Could not fetch Adit Pay records (" + e.message + ") — Record Number/Adit Pay Volume will be reported as missing.");
+    ? fetchJoinModuleById(aditPay, aditPayKeys, aditPayFieldMap).catch(function (e) {
+        console.warn("[zoho] Could not fetch Adit Pay records (" + e.message + ") â " + aditPayKeys.join(", ") + " will be reported as missing.");
         return null;
       })
     : Promise.resolve(null);
 
-  const [dealsResult, byDealId] = await Promise.all([dealsPromise, aditPayPromise]);
+  const [dealsResult, adoptionScoresByDealId, aditPayByDealId] = await Promise.all([dealsPromise, adoptionScoresPromise, aditPayPromise]);
   let rows = dealsResult.rows;
   let dealIds = dealsResult.dealIds;
 
   // Scope every fetched Deal down to Adit's own "All Deals which purchased
   // Terminals" report criteria (see dealMatchesTerminalPurchaseScope above)
-  // before anything else runs, so every downstream count — including this
-  // function's own log line below — reflects that same ~770-record scope
+  // before anything else runs, so every downstream count â including this
+  // function's own log line below â reflects that same ~770-record scope
   // rather than the whole company pipeline.
   const scopeNow = new Date();
   const scopedIdx = [];
@@ -447,16 +508,22 @@ async function fetchZohoDealsAsRows() {
   rows = scopedIdx.map(function (idx) { return rows[idx]; });
   dealIds = scopedIdx.map(function (idx) { return dealIds[idx]; });
 
-  // aditPayKeys may be non-empty even when byDealId is null (the fetch above
-  // failed and was caught) — joinedKeys is what actually made it into rows.
-  const joinedKeys = byDealId ? aditPayKeys : [];
-  if (byDealId) {
-    // A deal without a matching Adit Pay record (e.g. not yet processed) gets
-    // null cells for these columns — the row still comes through with every
-    // other column intact, rather than being dropped.
+  // Each set of join keys may be non-empty even when its byDealId map is
+  // null (the fetch above failed and was caught) â joinedKeys is what
+  // actually made it into rows, per source.
+  const joinedAdoptionScoresKeys = adoptionScoresByDealId ? adoptionScoresKeys : [];
+  const joinedAditPayKeys = aditPayByDealId ? aditPayKeys : [];
+  const joinedKeys = joinedAdoptionScoresKeys.concat(joinedAditPayKeys);
+  if (joinedAdoptionScoresKeys.length || joinedAditPayKeys.length) {
+    // A deal without a matching related-module record (e.g. not yet
+    // processed) gets null cells for these columns â the row still comes
+    // through with every other column intact, rather than being dropped.
     rows.forEach(function (row, idx) {
-      const joined = byDealId[dealIds[idx]];
-      joinedKeys.forEach(function (k, j) { row.push(joined ? joined[j] : null); });
+      const dealId = dealIds[idx];
+      const joinedAS = adoptionScoresByDealId ? adoptionScoresByDealId[dealId] : null;
+      joinedAdoptionScoresKeys.forEach(function (k, j) { row.push(joinedAS ? joinedAS[j] : null); });
+      const joinedAP = aditPayByDealId ? aditPayByDealId[dealId] : null;
+      joinedAditPayKeys.forEach(function (k, j) { row.push(joinedAP ? joinedAP[j] : null); });
     });
   }
 
@@ -464,7 +531,7 @@ async function fetchZohoDealsAsRows() {
   const headers = finalKeys.map(function (k) { return ZOHO_CANON_FIELDS[k].label; });
   console.log(
     "[zoho] Deals sync: matched " + finalKeys.length + "/" + Object.keys(ZOHO_CANON_FIELDS).length +
-    " columns (" + matchedKeys.length + " on Deals, " + joinedKeys.length + " on Adit Pay); " +
+    " columns (" + matchedKeys.length + " on Deals, " + joinedKeys.length + " joined from related modules); " +
     rawFetchedCount + " Deals fetched" + (ZOHO_DEALS_CVID ? " (custom view applied)" : " (no custom view configured — full Deals pull)") +
     ", " + rows.length + " match the terminal-purchase report scope."
   );
