@@ -850,6 +850,83 @@ app.get("/api/zoho/deal-search-sample", requireAuth, async (req, res) => {
   }
 });
 
+// Diagnostic: pages through EVERY Deal (not just the 771 known ones) and
+// tallies, among deals the live scope filter currently rejects, how many
+// fail each of the 7 report conditions (not mutually exclusive) plus a
+// breakdown of Stage values seen among rejected deals. Used to find which
+// condition is over-restrictive compared to the real "All Deals which
+// purchased Terminals" report. Read-only; never returns credentials.
+app.get("/api/zoho/scope-stats", requireAuth, async (req, res) => {
+  try {
+    const fields = encodeURIComponent(Object.values(SCOPE_FILTER_FIELDS).join(","));
+    const now = new Date();
+    let pageToken = null;
+    let total = 0, passed = 0;
+    const failCounts = {
+      cond1_terminalsSelectedYes: 0, cond2_nameNoTest: 0, cond3_stageAllowed: 0,
+      cond4or5_dateWindow: 0, cond6_terminalCountGte1: 0, cond7_notClosedLost: 0,
+    };
+    const stageCountsAmongRejected = {};
+    const terminalsSelectedValuesAmongRejected = {};
+    for (let i = 0; i < 100; i++) {
+      let url = "/crm/v8/Deals?fields=" + fields + "&per_page=200";
+      if (pageToken) url += "&page_token=" + encodeURIComponent(pageToken);
+      const data = await zohoApiGet(url);
+      const records = data.data || [];
+      total += records.length;
+      records.forEach(function (rec) {
+        const f = {};
+        Object.keys(SCOPE_FILTER_FIELDS).forEach(function (k) { f[k] = flattenZohoValue(rec[SCOPE_FILTER_FIELDS[k]]); });
+        const passes = dealMatchesTerminalPurchaseScope(f, now);
+        if (passes) { passed++; return; }
+        const cond1 = f.terminalsSelected === "Yes";
+        const cond2 = !(f.dealName && String(f.dealName).toLowerCase().indexOf("test") !== -1);
+        const cond3 = SCOPE_STAGE_ALLOWLIST.indexOf(f.stage) !== -1;
+        let cond4 = false, cond5 = false;
+        if (f.agreementSignedDate) {
+          const d = new Date(f.agreementSignedDate);
+          if (!isNaN(d.getTime())) {
+            const cutoff = new Date(now);
+            cutoff.setUTCMonth(cutoff.getUTCMonth() - 108);
+            cond4 = d >= cutoff && d <= now;
+            cond5 = d.getUTCFullYear() === now.getUTCFullYear() && d.getUTCMonth() === now.getUTCMonth();
+          }
+        }
+        const cond6 = f.terminalCount != null && Number(f.terminalCount) >= 1;
+        const cond7 = f.stage !== "Closed Lost";
+        if (!cond1) {
+          failCounts.cond1_terminalsSelectedYes++;
+          const tv = f.terminalsSelected == null ? "(blank)" : String(f.terminalsSelected);
+          terminalsSelectedValuesAmongRejected[tv] = (terminalsSelectedValuesAmongRejected[tv] || 0) + 1;
+        }
+        if (!cond2) failCounts.cond2_nameNoTest++;
+        if (!cond3) {
+          failCounts.cond3_stageAllowed++;
+          const sv = f.stage == null ? "(blank)" : String(f.stage);
+          stageCountsAmongRejected[sv] = (stageCountsAmongRejected[sv] || 0) + 1;
+        }
+        if (!(cond4 || cond5)) failCounts.cond4or5_dateWindow++;
+        if (!cond6) failCounts.cond6_terminalCountGte1++;
+        if (!cond7) failCounts.cond7_notClosedLost++;
+      });
+      const more = data.info && data.info.more_records;
+      pageToken = data.info && data.info.next_page_token;
+      if (!more || !pageToken) break;
+    }
+    res.json({
+      totalFetched: total,
+      passed: passed,
+      rejected: total - passed,
+      failCounts: failCounts,
+      stageCountsAmongRejected: stageCountsAmongRejected,
+      terminalsSelectedValuesAmongRejected: terminalsSelectedValuesAmongRejected,
+    });
+  } catch (err) {
+    console.error("[zoho] scope-stats failed:", err.message);
+    res.status(502).json({ error: "Unable to authenticate with Zoho CRM. Please check the Zoho environment variables." });
+  }
+});
+
 app.get("/api/zoho/sync-debug", requireAuth, async (req, res) => {
   try {
     const result = await fetchZohoDealsAsRows();
