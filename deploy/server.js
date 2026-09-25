@@ -553,6 +553,66 @@ try {
   console.warn("[dataset] Could not create data directory:", err.message);
 }
 
+// --- Server-side Zoho raw-data cache (keeps every login fast) ---
+// The live Zoho pull below (fetchZohoDealsAsRows) has to page through the
+// full ~20,000-record Deals module plus two related modules before scoping
+// down to the ~770 terminal-purchase deals the dashboard actually shows —
+// that can take minutes. Rather than making whichever user logs in first
+// (after a deploy, or ever) wait on that live pull, a background job here
+// keeps a plain {headers, rows} cache warm on its own schedule, and
+// /api/zoho/deals below serves straight from it. This is the exact same
+// {headers, rows} shape a live call already returns, so nothing about how
+// the browser parses/validates/displays the data changes — only where it
+// comes from. Persisted next to DATASET_FILE, so it survives restarts
+// wherever DATA_DIR is a durable volume.
+const ZOHO_RAW_CACHE_FILE = path.join(DATA_DIR, "zoho-raw-cache.json");
+const ZOHO_RAW_CACHE_REFRESH_MS = 30 * 60 * 1000; // keep it from ever going too stale
+let zohoRawCache = null; // { headers, rows, matchedColumns, fetchedAt }
+let zohoRawCacheRefreshing = null; // in-flight refresh promise, so concurrent callers share one fetch
+
+try {
+  const cached = fs.readFileSync(ZOHO_RAW_CACHE_FILE, "utf8");
+  zohoRawCache = JSON.parse(cached);
+  console.log("[zoho-cache] Loaded cached CRM data from disk (" + (zohoRawCache.rows || []).length + " rows, fetched " + zohoRawCache.fetchedAt + ").");
+} catch (err) {
+  console.warn("[zoho-cache] No usable cache on disk yet (expected on first run):", err.message);
+}
+
+// Runs the live Zoho pull and refreshes the shared cache. Safe to call
+// concurrently — every caller gets the same in-flight promise instead of
+// triggering duplicate live pulls. A failed refresh logs a warning and
+// leaves whatever cache already existed in place (same "keep showing the
+// last good data" behavior the browser's own background refresh already
+// relies on) rather than throwing away good data over a transient error.
+function refreshZohoRawCache() {
+  if (zohoRawCacheRefreshing) return zohoRawCacheRefreshing;
+  zohoRawCacheRefreshing = fetchZohoDealsAsRows().then(function (result) {
+    zohoRawCache = {
+      headers: result.headers,
+      rows: result.rows,
+      matchedColumns: result.matchedColumns,
+      fetchedAt: new Date().toISOString(),
+    };
+    fs.writeFile(ZOHO_RAW_CACHE_FILE, JSON.stringify(zohoRawCache), "utf8", function (err) {
+      if (err) console.warn("[zoho-cache] Could not persist cache to disk:", err.message);
+    });
+    console.log("[zoho-cache] Refreshed (" + zohoRawCache.rows.length + " rows) at " + zohoRawCache.fetchedAt + ".");
+    return zohoRawCache;
+  }).catch(function (err) {
+    console.warn("[zoho-cache] Background refresh failed, keeping previous cache if any:", err.message);
+    throw err;
+  }).finally(function () {
+    zohoRawCacheRefreshing = null;
+  });
+  return zohoRawCacheRefreshing;
+}
+
+// Kicks off an immediate refresh on server start (fills the cache even on a
+// completely fresh deploy, without waiting for anyone to log in) and then
+// keeps it warm on a fixed schedule, independent of any user activity.
+refreshZohoRawCache().catch(function () {}); // already logged above; don't crash startup on a failed first fetch
+setInterval(function () { refreshZohoRawCache().catch(function () {}); }, ZOHO_RAW_CACHE_REFRESH_MS);
+
 // Trust Railway's proxy so secure cookies work correctly behind TLS termination.
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "25mb" }));
@@ -656,13 +716,19 @@ app.get("/api/debug/zoho-fields", requireAuth, async (req, res) => {
 // never a raw access token — only Deals data.
 app.get("/api/zoho/deals", requireAuth, async (req, res) => {
   try {
-    const result = await fetchZohoDealsAsRows();
+    // ?fresh=1 (used only by the explicit "Sync from Zoho" / "Load from Zoho
+    // CRM" buttons) forces a live pull; every other caller — the automatic
+    // post-login load and its own quiet background refresh — is served
+    // straight from the warm cache above, which is what keeps every login
+    // fast regardless of how large the CRM has grown.
+    const forceFresh = req.query.fresh === "1" || req.query.fresh === "true";
+    const result = (forceFresh || !zohoRawCache) ? await refreshZohoRawCache() : zohoRawCache;
     res.json({
       headers: result.headers,
       rows: result.rows,
       matchedColumns: result.matchedColumns,
       recordCount: result.rows.length,
-      fetchedAt: new Date().toISOString(),
+      fetchedAt: result.fetchedAt,
     });
   } catch (err) {
     console.error("[zoho] Deals sync failed:", err.message);
