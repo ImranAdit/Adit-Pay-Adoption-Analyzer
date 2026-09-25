@@ -1409,8 +1409,8 @@ function aggregate(rows){
     pctBelowThreshold: total? active.length/total : 0,
     adoptedTiers: adoptedTiers, activeTiers: activeTiers, granularTiers: granularTiers,
     opportunity: {
-      need50: need(0.5), need60: need(0.6), need70: need(0.7),
-      target50: target(0.5), target60: target(0.6), target70: target(0.7),
+      need50: need(0.5), need60: need(0.6), need65: need(0.65), need70: need(0.7),
+      target60: target(0.6), target65: target(0.65), target70: target(0.7),
       potentialVolumeOpportunity: potentialVolumeOpportunity
     },
     activeAnalysis: {
@@ -1851,14 +1851,14 @@ function renderOpportunity(agg){
   el.innerHTML =
     '<p class="section-eyebrow">Adoption opportunity</p><h2>Path to higher adoption</h2>'+
     '<div class="opp-row">'+
-    oppCard(fmtInt(o.need50),"Deals needed for 50% adoption")+
     oppCard(fmtInt(o.need60),"Deals needed for 60% adoption")+
+    oppCard(fmtInt(o.need65),"Deals needed for 65% adoption")+
     oppCard(fmtInt(o.need70),"Deals needed for 70% adoption")+
     "</div>"+
     '<div class="stat-grid" style="margin-top:14px;">'+
     statTile(fmtMoney0(o.potentialVolumeOpportunity),"Potential volume opportunity")+
-    statTile(fmtInt(o.target50),"Target adopted deals @ 50%")+
     statTile(fmtInt(o.target60),"Target adopted deals @ 60%")+
+    statTile(fmtInt(o.target65),"Target adopted deals @ 65%")+
     statTile(fmtInt(o.target70),"Target adopted deals @ 70%")+
     "</div>"+
     '<p style="font-size:12px;color:var(--ink-soft);margin-top:12px;">Potential volume opportunity is the additional Adit Pay Volume every active deal would need to process to individually cross the $5,000 adoption threshold.</p>';
@@ -2179,8 +2179,8 @@ function exportPdf(){
     doc.addPage(); y = 40;
     doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.text("Adoption Opportunity", 40, y); y+=16;
     doc.autoTable({ startY:y, head:[["Metric","Value"]], body:[
-      ["Deals needed for 50% adoption", fmtInt(agg.opportunity.need50)],
       ["Deals needed for 60% adoption", fmtInt(agg.opportunity.need60)],
+      ["Deals needed for 65% adoption", fmtInt(agg.opportunity.need65)],
       ["Deals needed for 70% adoption", fmtInt(agg.opportunity.need70)],
       ["Potential volume opportunity", fmtMoney0(agg.opportunity.potentialVolumeOpportunity)]
     ], styles:{fontSize:9} });
