@@ -425,6 +425,18 @@
       0 20px 32px rgba(0,0,0,.18);
   }
   .footer-name{ color:var(--amber); font-style:italic; }
+
+  /* Gently fades the credit while the initial CRM sync/login loading screen
+     is showing, then hands control back once revealFooterFromIntro() (see
+     script below) removes this class -- it returns to its normal always-on
+     appearance exactly as defined above. */
+  .app-footer{ transition: opacity .9s ease, filter .9s ease; }
+  @keyframes footerIntroFade{
+    0%{ opacity:1; filter:grayscale(0) saturate(1); }
+    35%{ opacity:1; filter:grayscale(0) saturate(1); }
+    100%{ opacity:0; filter:grayscale(1) saturate(.25); }
+  }
+  .app-footer.footer-intro{ animation: footerIntroFade 3s ease-in-out forwards; }
   @media (max-width:640px){
     .footer-text{font-size:11px;}
     .footer-line{width:16px;}
@@ -589,7 +601,7 @@
     </div>
   </div>
 
-  <footer class="app-footer">
+  <footer class="app-footer footer-intro">
     <p class="footer-credit">
       <span class="footer-line"></span>
       <span class="footer-text">Designed &amp; Developed by <span class="footer-name">Imran</span></span>
@@ -871,6 +883,7 @@ function loadFromZoho(opts){
       throw new Error("Zoho fields for one or more required columns are not mapped yet.");
     }
     document.getElementById("initialLoading").hidden = true;
+    revealFooterFromIntro();
     App.fileName = "Zoho CRM (synced " + new Date().toLocaleString() + ")";
     App.chosenSheet = "Zoho CRM";
     App.headers = headers;
@@ -884,6 +897,15 @@ function loadFromZoho(opts){
     runValidation();
     return true;
   });
+}
+
+// Removes the intro fade class from the "Designed & Developed by Imran"
+// footer credit once the initial loading screen has gone away (success,
+// cached-instant load, or fallback to the manual upload screen) -- see the
+// .footer-intro rule in <style> for the fade-out itself.
+function revealFooterFromIntro(){
+  var footerEl = document.querySelector(".app-footer");
+  if (footerEl) footerEl.classList.remove("footer-intro");
 }
 
 // On page load, load data automatically so every signed-in user sees a
@@ -916,6 +938,7 @@ function tryAutoLoadDataset(){
     loadFromZoho({silent:true}).catch(function(err){
       console.warn("Zoho auto-load not available yet, falling back to the upload screen:", err);
       document.getElementById("initialLoading").hidden = true;
+      revealFooterFromIntro();
       document.getElementById("uploadSection").hidden = false;
     });
   });
@@ -938,6 +961,7 @@ function loadStoredDataset(){
       warnRecords: 0, excludedRecords: 0, includedRecords: App.processed.length, issues: []
     };
     document.getElementById("initialLoading").hidden = true;
+    revealFooterFromIntro();
     proceedToDashboard();
     return true;
   }).catch(function(err){
