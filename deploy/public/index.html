@@ -412,6 +412,7 @@
       </div>
       <button class="btn btn-ghost" id="btnSyncZoho" title="Pull the latest deals from Zoho CRM">Sync from Zoho</button>
       <button class="btn btn-ghost" id="btnNewFile" title="Upload a new file to replace the current dataset">Replace Data</button>
+      <button class="btn btn-ghost" id="btnDataQuality" title="Show data quality validation detail">Data Quality</button>
     </div>
     <div class="topbar-user" id="topbarUser">
       <img id="userAvatar" class="user-avatar" alt="" hidden>
@@ -535,7 +536,7 @@
         <div class="pager" id="explorerPager"></div>
       </section>
 
-      <section class="panel" id="validationDetailSection"></section>
+      <section class="panel" id="validationDetailSection" hidden></section>
     </section>
   </main>
 
@@ -749,6 +750,12 @@ fileInput.addEventListener("change", function(e){
 });
 
 document.getElementById("btnNewFile").addEventListener("click", function(){ location_reset(); });
+
+document.getElementById("btnDataQuality").addEventListener("click", function(){
+  var section = document.getElementById("validationDetailSection");
+  section.hidden = !section.hidden;
+  if (!section.hidden) section.scrollIntoView({behavior:"smooth", block:"start"});
+});
 
 document.getElementById("btnSyncZoho").addEventListener("click", function(){
   var btn = document.getElementById("btnSyncZoho");
