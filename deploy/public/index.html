@@ -387,6 +387,48 @@
     .filter-wide{grid-column:auto;}
     .ms-panel{left:auto; right:0; max-width:calc(100vw - 64px);}
   }
+
+  .app-footer{
+    margin:48px 0 28px; padding:40px 20px 8px; display:flex; justify-content:center;
+    perspective:700px;
+  }
+  .footer-credit{
+    margin:0; display:flex; align-items:center; gap:16px;
+    cursor:default; user-select:none;
+  }
+  .footer-line{
+    width:36px; height:1px;
+    background:linear-gradient(90deg, transparent, var(--line-strong), transparent);
+  }
+  .footer-text{
+    font-family:"Fraunces","Georgia",serif; font-weight:600; font-size:20px; letter-spacing:.02em;
+    color:var(--accent-strong);
+    display:inline-block; transform-style:preserve-3d; transform:rotateX(14deg);
+    text-shadow:
+      0 1px 0 rgba(255,255,255,.3),
+      0 2px 0 rgba(0,0,0,.09),
+      0 3px 0 rgba(0,0,0,.09),
+      0 4px 1px rgba(0,0,0,.12),
+      0 6px 10px rgba(0,0,0,.18),
+      0 12px 22px rgba(0,0,0,.16);
+    transition:transform .5s cubic-bezier(.22,1,.36,1), text-shadow .5s ease;
+  }
+  .footer-credit:hover .footer-text{
+    transform:rotateX(0deg) translateY(-3px) scale(1.045);
+    text-shadow:
+      0 1px 0 rgba(255,255,255,.35),
+      0 2px 0 rgba(0,0,0,.09),
+      0 3px 0 rgba(0,0,0,.09),
+      0 4px 0 rgba(0,0,0,.1),
+      0 5px 1px rgba(0,0,0,.12),
+      0 10px 18px rgba(0,0,0,.22),
+      0 20px 32px rgba(0,0,0,.18);
+  }
+  .footer-name{ color:var(--amber); font-style:italic; }
+  @media (max-width:640px){
+    .footer-text{font-size:16px;}
+    .footer-line{width:22px;}
+  }
 </style>
 </head>
 <body>
@@ -546,6 +588,14 @@
       <div class="modal-body" id="drilldownBody"></div>
     </div>
   </div>
+
+  <footer class="app-footer">
+    <p class="footer-credit">
+      <span class="footer-line"></span>
+      <span class="footer-text">Designed &amp; Developed by <span class="footer-name">Imran</span></span>
+      <span class="footer-line"></span>
+    </p>
+  </footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
