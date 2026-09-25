@@ -1261,6 +1261,16 @@ function proceedToDashboard(){
 }
 document.getElementById("generateBtn").addEventListener("click", proceedToDashboard);
 
+// Wired once here (not inside buildFilterUI, which can run more than once --
+// e.g. a silent background Zoho refresh re-renders the dashboard after the
+// cached version already loaded) so repeat calls never stack duplicate click
+// listeners on these two static buttons, which previously made the Filters
+// toggle cancel itself out after any such re-render.
+document.getElementById("btnToggleFilters").addEventListener("click", function(){
+  var p = document.getElementById("filtersPanel"); p.hidden = !p.hidden;
+});
+document.getElementById("btnResetFilters").addEventListener("click", resetFilters);
+
 /* ============================== filters ============================== */
 
 function buildDistinctValues(){
@@ -1348,10 +1358,6 @@ function buildFilterUI(){
     });
   });
 
-  document.getElementById("btnToggleFilters").addEventListener("click", function(){
-    var p = document.getElementById("filtersPanel"); p.hidden = !p.hidden;
-  });
-  document.getElementById("btnResetFilters").addEventListener("click", resetFilters);
 }
 
 function updateMsSummary(key){
