@@ -867,7 +867,11 @@ fetch("/auth/me").then(function(r){ return r.ok ? r.json() : null; }).then(funct
 // last stored dataset when Zoho isn't configured/reachable/mapped yet.
 function loadFromZoho(opts){
   opts = opts || {};
-  return fetch("/api/zoho/deals").then(function(r){
+  // A silent (automatic) call is served from the server's warm cache for
+  // speed; an explicit user-triggered sync (the "Sync from Zoho" / "Load
+  // from Zoho CRM" buttons) asks for a real live pull via ?fresh=1.
+  var zohoUrl = "/api/zoho/deals" + (opts.silent ? "" : "?fresh=1");
+  return fetch(zohoUrl).then(function(r){
     return r.json().catch(function(){ return null; }).then(function(data){ return {ok:r.ok, data:data}; });
   }).then(function(res){
     if (!res.ok || !res.data){
