@@ -503,7 +503,8 @@
         <p class="section-eyebrow">Trend</p>
         <h2 style="margin-bottom:14px;">Monthly adoption trend (2026)</h2>
         <div class="charts-grid">
-          <div class="chart-card" style="grid-column:1/-1;"><h3>Adopted deals by month</h3><p class="chart-sub">Count of deals adopted each month in 2026, by Pay Adopt Date</p><div class="chart-wrap"><canvas id="chartAdoptedByMonth"></canvas></div></div>
+          <div class="chart-card"><h3>Adopted deals by month</h3><p class="chart-sub">Count of deals adopted each month in 2026, by Pay Adopt Date</p><div class="chart-wrap"><canvas id="chartAdoptedByMonth"></canvas></div></div>
+          <div class="chart-card"><h3>Deal status by stage</h3><p class="chart-sub">Active, Failed, and Adopted deal counts per Stage</p><div class="chart-wrap"><canvas id="chartStageBreakdown"></canvas></div></div>
         </div>
       </section>
 
@@ -1636,6 +1637,63 @@ function renderCharts(agg){
           openDrilldown({ label:monthLabels2026[i]+" 2026", count:monthRows2026[i].length, members:monthRows2026[i] });
         } },
       plugins:[liftShadowPlugin("barLift-adoptedByMonth", 8, 3, .2)]
+    });
+  }
+
+  // Stage-wise breakdown: Active (excl. Fail), Failed, and Adopted deal counts
+  // per Stage. Computed here purely for this chart, from agg.active/agg.adopted
+  // -- doesn't touch agg.activeTiers, agg.activeCount, or any other section.
+  var stageMap = {};
+  function stageBucket(stageName){
+    var key = stageName || "(No Stage)";
+    if (!stageMap[key]) stageMap[key] = {active:0, failed:0, adopted:0, activeMembers:[], failedMembers:[], adoptedMembers:[]};
+    return stageMap[key];
+  }
+  agg.active.forEach(function(r){
+    var b = stageBucket(r.stage);
+    if (r.payScore==="Fail") { b.failed++; b.failedMembers.push(r); }
+    else { b.active++; b.activeMembers.push(r); }
+  });
+  agg.adopted.forEach(function(r){
+    var b = stageBucket(r.stage);
+    b.adopted++; b.adoptedMembers.push(r);
+  });
+  var stageNames = Object.keys(stageMap).sort(function(a,b){
+    var ta = stageMap[a].active+stageMap[a].failed+stageMap[a].adopted;
+    var tb = stageMap[b].active+stageMap[b].failed+stageMap[b].adopted;
+    return tb-ta;
+  });
+  var sCtx = document.getElementById("chartStageBreakdown");
+  if (sCtx) {
+    App.charts.stageBreakdown = new Chart(sCtx, {
+      type:"bar",
+      data:{ labels:stageNames, datasets:[
+        { label:"Active", data:stageNames.map(function(s){ return stageMap[s].active; }),
+          backgroundColor: function(c){ return verticalMetalGradient(c.chart, CHART_COLORS.active); },
+          borderColor:CHART_COLORS.active, borderWidth:1.5, borderRadius:6, maxBarThickness:26 },
+        { label:"Failed", data:stageNames.map(function(s){ return stageMap[s].failed; }),
+          backgroundColor: function(c){ return verticalMetalGradient(c.chart, CHART_COLORS.danger); },
+          borderColor:CHART_COLORS.danger, borderWidth:1.5, borderRadius:6, maxBarThickness:26 },
+        { label:"Adopted", data:stageNames.map(function(s){ return stageMap[s].adopted; }),
+          backgroundColor: function(c){ return verticalMetalGradient(c.chart, CHART_COLORS.adopted); },
+          borderColor:CHART_COLORS.adopted, borderWidth:1.5, borderRadius:6, maxBarThickness:26 }
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:true, position:"bottom", labels:{boxWidth:10,padding:12}},
+          tooltip:{ callbacks:{ label:function(c){ return c.dataset.label+": "+fmtInt(c.parsed.y||c.parsed.x); } } } },
+        scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:{maxRotation:60, minRotation:60, autoSkip:false, font:{size:9.5}} },
+                 y:{ grid:{color:grid}, border:{display:false}, ticks:{precision:0} } },
+        onHover:function(evt, els, chart){ chart.canvas.style.cursor = els.length ? "pointer" : "default"; },
+        onClick:function(evt, els){
+          if (!els.length) return;
+          var el = els[0];
+          var stageName = stageNames[el.index];
+          var seriesKeys = ["activeMembers","failedMembers","adoptedMembers"];
+          var seriesLabels = ["Active","Failed","Adopted"];
+          var members = stageMap[stageName][seriesKeys[el.datasetIndex]];
+          openDrilldown({ label: stageName+" — "+seriesLabels[el.datasetIndex], count: members.length, members: members });
+        } },
+      plugins:[liftShadowPlugin("barLift-stageBreakdown", 8, 3, .2)]
     });
   }
 
