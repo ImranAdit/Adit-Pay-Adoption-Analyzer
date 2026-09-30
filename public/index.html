@@ -12,8 +12,8 @@
     --accent:#2F6F5E; --accent-strong:#1F5245; --accent-soft:#E4EEE9;
     --amber:#B8702F; --amber-soft:#F7EADA;
     --danger:#AE3B3B; --danger-soft:#F8E4E2;
-    --shadow: 0 1px 2px rgba(22,33,29,.06), 0 6px 20px rgba(22,33,29,.05);
-    --radius:14px; --radius-sm:9px;
+    --shadow: 0 1px 2px rgba(22,33,29,.04), 0 8px 24px rgba(22,33,29,.05);
+    --radius:16px; --radius-sm:10px;
     font-size:16px;
   }
   @media (prefers-color-scheme: dark){
@@ -23,7 +23,7 @@
       --accent:#59B99B; --accent-strong:#7ED4B6; --accent-soft:#1E3129;
       --amber:#E0A15C; --amber-soft:#3A2A18;
       --danger:#E28080; --danger-soft:#3A2020;
-      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+      --shadow: 0 1px 2px rgba(0,0,0,.28), 0 10px 28px rgba(0,0,0,.32);
     }
   }
   :root[data-theme="dark"]{
@@ -32,7 +32,7 @@
     --accent:#59B99B; --accent-strong:#7ED4B6; --accent-soft:#1E3129;
     --amber:#E0A15C; --amber-soft:#3A2A18;
     --danger:#E28080; --danger-soft:#3A2020;
-    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    --shadow: 0 1px 2px rgba(0,0,0,.28), 0 10px 28px rgba(0,0,0,.32);
   }
   *{box-sizing:border-box;}
   body{
@@ -45,59 +45,100 @@
   a{color:var(--accent);}
   button{font-family:inherit;}
   .app{max-width:1280px;margin:0 auto;padding-bottom:64px;}
-
+ 
   .topbar{
     position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
-    background:var(--paper); border-bottom:1px solid var(--line);
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter:blur(14px) saturate(1.5); -webkit-backdrop-filter:blur(14px) saturate(1.5);
+    border-bottom:1px solid var(--line);
     display:flex; align-items:center; justify-content:space-between; gap:16px;
     padding:16px 0; flex-wrap:wrap;
   }
   .brand{display:flex; align-items:center; gap:14px;}
   .brand-mark{
-    width:44px;height:44px;border-radius:11px;background:var(--accent);color:#fff;
-    display:flex;align-items:center;justify-content:center;font-family:"Fraunces",serif;
-    font-weight:700;font-size:17px;letter-spacing:-.02em;flex:none;
+    width:46px;height:46px;border-radius:12px;background:var(--surface);
+    display:flex;align-items:center;justify-content:center;flex:none;
+    padding:7px; box-shadow:var(--shadow); border:1px solid var(--line);
+    transition:transform .2s ease, box-shadow .2s ease;
   }
+  .brand-mark img, .brand-mark svg{width:100%;height:100%;object-fit:contain;display:block;}
+  .brand:hover .brand-mark{transform:scale(1.05) rotate(-2deg); box-shadow:0 2px 6px rgba(22,33,29,.1), 0 10px 26px rgba(22,33,29,.12);}
   .brand h1{font-size:20px; line-height:1.2;}
   .brand p{margin:2px 0 0; color:var(--ink-soft); font-size:13px;}
   .topbar-actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
-
+  .topbar-user{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .user-avatar{width:26px;height:26px;border-radius:99px;object-fit:cover;border:1px solid var(--line);}
+  .user-name{font-size:12.5px; color:var(--ink-soft); font-weight:500;}
+ 
+  @keyframes fadeInUp{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);}}
+ 
   .btn{
     appearance:none; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink);
-    padding:9px 14px; border-radius:9px; font-size:13.5px; font-weight:500; cursor:pointer;
-    display:inline-flex; align-items:center; gap:7px; transition:background .12s, border-color .12s;
+    padding:9px 15px; border-radius:var(--radius-sm); font-size:13.5px; font-weight:500; cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px;
+    transition:background .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease;
   }
-  .btn:hover{background:var(--accent-soft); border-color:var(--accent);}
+  .btn:hover{background:var(--accent-soft); border-color:var(--accent); transform:translateY(-1px); box-shadow:0 3px 8px rgba(22,33,29,.08);}
+  .btn:active{transform:translateY(0); box-shadow:none;}
   .btn:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
-  .btn-primary{background:var(--accent); border-color:var(--accent); color:#fff;}
-  .btn-primary:hover{background:var(--accent-strong); border-color:var(--accent-strong);}
-  .btn-primary:disabled{opacity:.5; cursor:not-allowed;}
-  .btn-ghost{border-color:transparent; background:transparent;}
-  .btn-ghost:hover{background:var(--accent-soft);}
+  .btn-primary{
+    background:linear-gradient(155deg, var(--accent), var(--accent-strong)); border-color:var(--accent-strong); color:#fff;
+    box-shadow:0 1px 2px rgba(22,33,29,.1), 0 6px 16px rgba(31,82,69,.22);
+  }
+  .btn-primary:hover{background:linear-gradient(155deg, var(--accent-strong), var(--accent-strong)); border-color:var(--accent-strong); box-shadow:0 2px 4px rgba(22,33,29,.12), 0 10px 22px rgba(31,82,69,.3); transform:translateY(-1px);}
+  .btn-primary:disabled{opacity:.5; cursor:not-allowed; transform:none; box-shadow:none;}
+  .btn-ai{
+    display:inline-flex; align-items:center; gap:9px; position:relative; overflow:hidden;
+    background:linear-gradient(135deg, var(--accent), var(--accent-strong) 55%, var(--amber));
+    border-color:var(--accent-strong); font-size:14.5px; padding:11px 20px;
+    box-shadow:0 1px 2px rgba(22,33,29,.14), 0 10px 26px rgba(31,82,69,.3);
+  }
+  .btn-ai svg{flex:none;}
+  .btn-ai::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(120deg, transparent 35%, rgba(255,255,255,.4) 48%, transparent 62%);
+    transform:translateX(-120%); animation:aiShine 3.4s ease-in-out infinite;
+  }
+  .btn-ai:hover{transform:translateY(-1px); box-shadow:0 2px 5px rgba(22,33,29,.16), 0 14px 30px rgba(31,82,69,.36);}
+  @keyframes aiShine{ 0%,55%{transform:translateX(-120%);} 100%{transform:translateX(120%);} }
+  .btn-ghost{border-color:transparent; background:transparent; box-shadow:none;}
+  .btn-ghost:hover{background:var(--accent-soft); box-shadow:none;}
   .btn-sm{padding:6px 10px; font-size:12.5px;}
-
+ 
   .panel{
     background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
-    padding:22px; margin-top:20px; box-shadow:var(--shadow);
+    padding:24px; margin-top:20px; box-shadow:var(--shadow);
+    animation:fadeInUp .5s ease both;
+    transition:box-shadow .3s cubic-bezier(.2,.8,.2,1), transform .3s cubic-bezier(.2,.8,.2,1), border-color .25s ease;
   }
-  .panel > h2{font-size:18px; margin-bottom:4px;}
-  .panel-sub{color:var(--ink-soft); font-size:13px; margin:0 0 16px;}
+  .panel:hover{box-shadow:0 3px 8px rgba(22,33,29,.07), 0 20px 38px rgba(22,33,29,.1); border-color:var(--line-strong);}
+  .panel > h2{font-size:18.5px; margin-bottom:5px; letter-spacing:-.005em;}
+  .panel-sub{color:var(--ink-soft); font-size:13px; margin:0 0 18px; line-height:1.5;}
   .section-eyebrow{
-    text-transform:uppercase; letter-spacing:.08em; font-size:11px; font-weight:600;
-    color:var(--accent); margin:0 0 6px;
+    text-transform:uppercase; letter-spacing:.09em; font-size:11px; font-weight:700;
+    color:var(--accent); margin:0 0 7px;
   }
-
+ 
   /* Upload */
   .dropzone{
-    border:1.5px dashed var(--line-strong); border-radius:var(--radius); padding:44px 20px;
-    text-align:center; cursor:pointer; transition:border-color .15s, background .15s;
+    max-width:560px; margin:4px auto 0; background:var(--paper);
+    border:1.5px dashed var(--line-strong); border-radius:var(--radius); padding:48px 24px;
+    text-align:center; cursor:pointer;
+    transition:border-color .2s ease, background .2s ease, transform .2s ease, box-shadow .2s ease;
   }
-  .dropzone.drag{border-color:var(--accent); background:var(--accent-soft);}
-  .dropzone svg{color:var(--accent);}
-  .dropzone p{margin:14px 0 2px; font-size:15.5px;}
-  .dropzone .hint{color:var(--ink-soft); font-size:12.5px; margin-top:4px;}
+  .dropzone:hover{border-color:var(--accent); background:var(--accent-soft); transform:translateY(-1px); box-shadow:var(--shadow);}
+  .dropzone.drag{border-color:var(--accent); background:var(--accent-soft); transform:translateY(-1px);}
+  .dropzone:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .dropzone-icon{
+    width:56px; height:56px; border-radius:50%; margin:0 auto; display:flex; align-items:center; justify-content:center;
+    background:var(--accent-soft); color:var(--accent-strong); transition:transform .2s ease;
+  }
+  .dropzone:hover .dropzone-icon{transform:scale(1.06);}
+  .dropzone p{margin:16px 0 2px; font-size:15.5px; font-weight:500;}
+  .dropzone .hint{color:var(--ink-soft); font-size:11.5px; margin-top:8px; text-transform:uppercase; letter-spacing:.05em;}
   .dropzone button{background:none;border:none;color:var(--accent);font-weight:600;cursor:pointer;padding:0;font-size:inherit;text-decoration:underline;}
-
+  .generate-row{margin-top:24px; text-align:center; animation:fadeInUp .4s ease both;}
+ 
   .file-meta{
     display:flex; gap:28px; flex-wrap:wrap; align-items:center; margin-top:18px; padding:14px 16px;
     background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-sm);
@@ -106,22 +147,22 @@
   .file-meta .fm-label{color:var(--ink-soft); display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:2px;}
   .file-meta .fm-val{font-weight:600;}
   .badge{
-    display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:99px;
-    font-size:11.5px; font-weight:600;
+    display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:99px;
+    font-size:11.5px; font-weight:600; letter-spacing:.02em;
   }
   .badge-ok{background:var(--accent-soft); color:var(--accent-strong);}
   .badge-warn{background:var(--amber-soft); color:var(--amber);}
   .badge-bad{background:var(--danger-soft); color:var(--danger);}
-
+ 
   .sheet-picker{margin-top:18px; padding:16px; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-sm);}
   .sheet-picker select{margin-right:10px;}
-
+ 
   select, input[type="text"], input[type="number"], input[type="date"], input[type="search"]{
     border:1px solid var(--line-strong); background:var(--surface); color:var(--ink);
     border-radius:8px; padding:7px 10px; font-size:13px; font-family:inherit;
   }
   select:focus, input:focus{outline:2px solid var(--accent); outline-offset:0; border-color:var(--accent);}
-
+ 
   /* validation */
   .val-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:14px 0;}
   .val-tile{border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px 14px; background:var(--paper);}
@@ -133,51 +174,99 @@
   table{width:100%; border-collapse:collapse; font-size:13px;}
   thead th{
     position:sticky; top:0; background:var(--paper); text-align:left; font-size:11px;
-    text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); padding:8px 10px;
+    text-transform:uppercase; letter-spacing:.05em; font-weight:600; color:var(--ink-soft); padding:9px 10px;
     border-bottom:1px solid var(--line); white-space:nowrap;
   }
-  tbody td{padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top;}
+  tbody td{padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top;}
   tbody tr:last-child td{border-bottom:none;}
-  tbody tr:hover{background:var(--accent-soft);}
-
+  tbody tr{transition:background .12s ease;}
+  tbody tr:hover{background:color-mix(in srgb, var(--accent-soft) 60%, transparent);}
+ 
   /* KPI grid */
-  .kpi-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:14px; margin-top:20px;}
+  .kpi-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px; margin-top:22px;}
   .kpi-card{
-    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
-    padding:18px 18px 16px; box-shadow:var(--shadow); position:relative; overflow:hidden;
+    display:flex; flex-direction:column; justify-content:space-between; gap:16px;
+    min-height:140px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:20px 20px 18px; box-shadow:var(--shadow); position:relative; overflow:hidden;
+    animation:fadeInUp .5s ease both; animation-delay:.04s;
+    transition:box-shadow .3s cubic-bezier(.2,.8,.2,1), transform .3s cubic-bezier(.2,.8,.2,1), border-color .25s ease;
   }
-  .kpi-card .kpi-label{font-size:12px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em;}
-  .kpi-card .kpi-val{font-size:26px; font-weight:600; margin-top:6px; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;}
-  .kpi-card .kpi-sub{font-size:12px; color:var(--ink-soft); margin-top:4px;}
-  .kpi-card.accent{border-color:var(--accent);}
-  .kpi-card.accent::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent);}
-  .kpi-card.amber::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--amber);}
-
+  .kpi-card:hover{transform:translateY(-4px); box-shadow:0 4px 10px rgba(22,33,29,.08), 0 22px 40px rgba(22,33,29,.12); border-color:var(--line-strong);}
+  .kpi-card:hover .kpi-icon{transform:scale(1.08);}
+  .kpi-head{display:flex; align-items:flex-start; justify-content:space-between; gap:12px;}
+  .kpi-card .kpi-label{font-size:11.5px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.06em; line-height:1.3; max-width:15ch;}
+  .kpi-icon{
+    width:34px; height:34px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(155deg, color-mix(in srgb, var(--paper) 45%, white) 0%, var(--paper) 55%, color-mix(in srgb, var(--paper) 85%, black 8%) 100%);
+    color:var(--ink-soft); border:1px solid var(--line);
+    box-shadow:inset 0 1px 1px rgba(255,255,255,.7), inset 0 -1px 2px rgba(22,33,29,.1), 0 1px 2px rgba(22,33,29,.07);
+    transition:transform .25s ease, box-shadow .25s ease;
+  }
+  .kpi-icon svg{width:16px; height:16px; filter:drop-shadow(0 1px 0 rgba(255,255,255,.4));}
+  .kpi-card.accent .kpi-icon{
+    background:linear-gradient(155deg, color-mix(in srgb, var(--accent-soft) 55%, white) 0%, var(--accent-soft) 55%, color-mix(in srgb, var(--accent-soft) 65%, var(--accent) 25%) 100%);
+    color:var(--accent-strong); border-color:color-mix(in srgb, var(--accent) 30%, var(--line));
+    box-shadow:inset 0 1px 1px rgba(255,255,255,.55), inset 0 -1px 2px rgba(31,82,69,.18), 0 1px 3px rgba(31,82,69,.12);
+  }
+  .kpi-card.amber .kpi-icon{
+    background:linear-gradient(155deg, color-mix(in srgb, var(--amber-soft) 55%, white) 0%, var(--amber-soft) 55%, color-mix(in srgb, var(--amber-soft) 65%, var(--amber) 25%) 100%);
+    color:var(--amber); border-color:color-mix(in srgb, var(--amber) 30%, var(--line));
+    box-shadow:inset 0 1px 1px rgba(255,255,255,.55), inset 0 -1px 2px rgba(184,112,47,.18), 0 1px 3px rgba(184,112,47,.12);
+  }
+  .kpi-card.danger .kpi-icon{
+    background:linear-gradient(155deg, color-mix(in srgb, var(--danger-soft) 55%, white) 0%, var(--danger-soft) 55%, color-mix(in srgb, var(--danger-soft) 65%, var(--danger) 25%) 100%);
+    color:var(--danger); border-color:color-mix(in srgb, var(--danger) 30%, var(--line));
+    box-shadow:inset 0 1px 1px rgba(255,255,255,.55), inset 0 -1px 2px rgba(174,59,59,.18), 0 1px 3px rgba(174,59,59,.12);
+  }
+  .kpi-body{display:flex; flex-direction:column; gap:7px;}
+  .kpi-card .kpi-val{
+    font-size:27px; font-weight:700; letter-spacing:-.01em; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; line-height:1.1;
+    background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 88%, white 12%) 0%, var(--ink) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 1px 1px rgba(22,33,29,.06);
+  }
+  .kpi-card.accent .kpi-val{ background:linear-gradient(180deg, color-mix(in srgb, var(--accent-strong) 78%, white 22%) 0%, var(--accent-strong) 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .kpi-card.amber .kpi-val{ background:linear-gradient(180deg, color-mix(in srgb, var(--amber) 78%, white 22%) 0%, var(--amber) 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .kpi-card.danger .kpi-val{ background:linear-gradient(180deg, color-mix(in srgb, var(--danger) 78%, white 22%) 0%, var(--danger) 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .kpi-card.kpi-primary .kpi-val{font-size:31px;}
+  .kpi-card .kpi-sub{display:flex; align-items:center; gap:5px; font-size:12px; color:var(--ink-soft); line-height:1.35;}
+  .kpi-trend{width:13px; height:13px; flex:none;}
+  .kpi-card.accent .kpi-trend{color:var(--accent);}
+  .kpi-card.amber .kpi-trend{color:var(--amber);}
+  .kpi-card.danger .kpi-trend{color:var(--danger);}
+ 
   /* narrative strip */
   .narrative{
-    margin:16px 2px 0; font-family:"Fraunces","Georgia",serif; font-size:19px; line-height:1.45;
+    margin:20px 0 0; font-family:"Fraunces","Georgia",serif; font-size:19px; line-height:1.5;
     color:var(--ink); font-weight:500; text-wrap:balance; max-width:78ch;
+    padding:2px 0 2px 18px; border-left:3px solid var(--accent);
   }
   .narrative strong{color:var(--accent-strong); font-weight:700;}
   .narrative .n-amber{color:var(--amber); font-weight:700;}
-
+ 
   /* charts */
   .hero-panel{background:linear-gradient(165deg, var(--accent-soft), var(--surface) 55%);}
   .hero-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:14px;}
-  .hero-card{border-color:var(--line-strong);}
+  .hero-card{border-color:var(--line-strong); transition:box-shadow .3s cubic-bezier(.2,.8,.2,1), transform .3s cubic-bezier(.2,.8,.2,1);}
+  .hero-card:hover{box-shadow:0 4px 10px rgba(22,33,29,.08), 0 20px 38px rgba(22,33,29,.12); transform:translateY(-3px);}
   .chart-wrap.hero{height:280px;}
   .charts-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; margin-top:20px;}
-  .chart-card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow); transition:box-shadow .15s, transform .15s;}
+  .chart-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px;
+    box-shadow:var(--shadow); transition:box-shadow .3s cubic-bezier(.2,.8,.2,1), transform .3s cubic-bezier(.2,.8,.2,1), border-color .25s ease;
+    animation:fadeInUp .5s ease both; animation-delay:.08s;
+  }
+  .chart-card:hover{box-shadow:0 4px 10px rgba(22,33,29,.08), 0 20px 38px rgba(22,33,29,.12); transform:translateY(-4px); border-color:var(--line-strong);}
   .chart-card h3{font-size:14px; margin-bottom:2px;}
   .chart-card .chart-sub{font-size:12px; color:var(--ink-soft); margin:0 0 10px;}
   .chart-wrap{position:relative; height:230px;}
   .chart-wrap.small{height:180px;}
-
+ 
   /* tier tables */
   .tier-table td.clickable{cursor:pointer; color:var(--accent); font-weight:600;}
   .tier-table td.clickable:hover{text-decoration:underline;}
   tfoot td{font-weight:700; border-top:2px solid var(--line-strong); background:var(--paper);}
-
+ 
   /* filters */
   .filters-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px;}
   .filter-group{display:flex; flex-direction:column; gap:6px; min-width:0;}
@@ -203,38 +292,67 @@
   .preset-row{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;}
   .preset-row button{
     border:1px solid var(--line-strong); background:var(--surface); border-radius:7px; padding:5px 9px;
-    font-size:12px; cursor:pointer;
+    font-size:12px; cursor:pointer; transition:background .15s ease, border-color .15s ease, color .15s ease;
   }
+  .preset-row button:hover{background:var(--accent-soft); border-color:var(--accent);}
   .preset-row button.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .preset-row button.active:hover{background:var(--accent);}
   .filters-foot{display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:14px; border-top:1px solid var(--line);}
   .filter-count{font-size:12.5px; color:var(--ink-soft);}
-
-  /* reconciliation */
-  .recon-banner{display:flex; gap:10px; align-items:center; padding:12px 16px; border-radius:var(--radius-sm); margin-top:20px; font-size:13.5px; font-weight:500;}
-  .recon-ok{background:var(--accent-soft); color:var(--accent-strong); border:1px solid var(--accent);}
-  .recon-bad{background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger);}
-
+ 
   /* opportunity + active analysis */
   .stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px;}
-  .stat-tile{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px 14px;}
-  .stat-tile .st-val{font-size:19px; font-weight:600; font-family:"IBM Plex Mono",monospace;}
-  .stat-tile .st-lbl{font-size:12px; color:var(--ink-soft); margin-top:2px;}
-  .opp-row{display:flex; gap:12px; flex-wrap:wrap; margin-top:14px;}
-  .opp-card{flex:1; min-width:150px; background:var(--accent-soft); border:1px solid var(--accent); border-radius:var(--radius-sm); padding:14px;}
-  .opp-card .opp-num{font-size:22px; font-weight:700; color:var(--accent-strong); font-family:"IBM Plex Mono",monospace;}
-  .opp-card .opp-lbl{font-size:12.5px; color:var(--ink-soft); margin-top:3px;}
-
+  .stat-tile{
+    background:linear-gradient(165deg, color-mix(in srgb, var(--surface) 70%, white 8%) 0%, var(--paper) 55%, color-mix(in srgb, var(--paper) 88%, black 6%) 100%);
+    border:1px solid var(--line); border-radius:var(--radius-sm); padding:14px 16px; position:relative; overflow:hidden;
+    box-shadow:inset 0 1px 1px rgba(255,255,255,.5), 0 1px 2px rgba(22,33,29,.05);
+    transition:border-color .2s ease, transform .25s ease, box-shadow .25s ease;
+  }
+  .stat-tile:hover{transform:translateY(-2px); border-color:var(--line-strong); box-shadow:inset 0 1px 1px rgba(255,255,255,.5), 0 3px 8px rgba(22,33,29,.07), 0 14px 26px rgba(22,33,29,.09);}
+  .stat-tile .st-val{
+    font-size:20px; font-weight:700; letter-spacing:-.005em; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+    background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 88%, white 12%) 0%, var(--ink) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 1px 1px rgba(22,33,29,.05);
+  }
+  .stat-tile .st-lbl{font-size:11px; color:var(--ink-soft); margin-top:5px; text-transform:uppercase; letter-spacing:.04em; font-weight:600;}
+  .opp-row{display:flex; gap:14px; flex-wrap:wrap; margin-top:14px;}
+  .opp-card{
+    flex:1; min-width:170px; border-radius:var(--radius);
+    background:linear-gradient(160deg, color-mix(in srgb, var(--accent-soft) 60%, white 15%) 0%, var(--accent-soft) 45%, color-mix(in srgb, var(--accent-soft) 70%, var(--accent) 18%) 100%);
+    border:1px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+    padding:18px; position:relative; overflow:hidden;
+    box-shadow:inset 0 1px 1px rgba(255,255,255,.5), inset 0 -1px 3px rgba(31,82,69,.08), 0 1px 2px rgba(22,33,29,.05);
+    transition:box-shadow .25s ease, transform .25s ease, border-color .25s ease;
+  }
+  .opp-card::before{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background:linear-gradient(115deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,0) 32%);
+  }
+  .opp-card:hover{transform:translateY(-3px); border-color:var(--accent); box-shadow:inset 0 1px 1px rgba(255,255,255,.5), inset 0 -1px 3px rgba(31,82,69,.08), 0 3px 8px rgba(22,33,29,.08), 0 16px 30px rgba(31,82,69,.16);}
+  .opp-card .opp-num{
+    font-size:27px; font-weight:700; letter-spacing:-.01em; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+    background:linear-gradient(180deg, color-mix(in srgb, var(--accent-strong) 78%, white 22%) 0%, var(--accent-strong) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 1px 1px rgba(31,82,69,.08);
+    position:relative; z-index:1;
+  }
+  .opp-card .opp-lbl{font-size:12.5px; color:var(--ink-soft); margin-top:5px; font-weight:500; line-height:1.35; position:relative; z-index:1;}
+ 
   /* explorer */
   .explorer-toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px;}
   .explorer-toolbar input[type="search"]{flex:1; min-width:200px;}
+  .search-wrap{position:relative; flex:1; min-width:200px;}
+  .search-wrap svg{position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--ink-soft); pointer-events:none;}
+  .search-wrap input[type="search"]{width:100%; padding-left:33px;}
   th.sortable{cursor:pointer; user-select:none;}
   th.sortable .arrow{margin-left:3px; opacity:.5;}
   th.sortable.active .arrow{opacity:1; color:var(--accent);}
   .table-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius-sm);}
   .pager{display:flex; gap:10px; align-items:center; justify-content:flex-end; margin-top:10px; font-size:12.5px; color:var(--ink-soft);}
-
+ 
   /* modal */
-  .modal{position:fixed; inset:0; background:rgba(20,24,20,.5); z-index:100; display:flex; align-items:center; justify-content:center; padding:20px;}
+  .modal{position:fixed; inset:0; background:rgba(20,24,20,.55); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); z-index:100; display:flex; align-items:center; justify-content:center; padding:20px;}
   .modal-card{
     background:var(--surface); border-radius:var(--radius); max-width:960px; width:100%; max-height:86vh;
     display:flex; flex-direction:column; box-shadow:var(--shadow); border:1px solid var(--line);
@@ -243,7 +361,7 @@
   .modal-card header h3{font-size:16px;}
   .modal-card .modal-body{padding:16px 20px; overflow:auto;}
   .modal-close{background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-soft); line-height:1;}
-
+ 
   .export-menu{position:relative;}
   .export-panel{
     position:absolute; right:0; top:calc(100% + 6px); background:var(--surface); border:1px solid var(--line-strong);
@@ -254,28 +372,86 @@
     font-size:13px; cursor:pointer; color:var(--ink);
   }
   .export-panel button:hover{background:var(--accent-soft);}
-
-  .empty-note{color:var(--ink-soft); font-size:13px; padding:20px; text-align:center;}
+ 
+  .empty-note{color:var(--ink-soft); font-size:13.5px; padding:32px 20px; text-align:center; font-style:italic;}
   [hidden]{display:none !important;}
-
+ 
   @media (max-width:640px){
     .topbar{flex-direction:column; align-items:flex-start;}
     .panel{padding:16px;}
+    .kpi-card{min-height:0; padding:16px;}
     .kpi-card .kpi-val{font-size:22px;}
+    .kpi-card.kpi-primary .kpi-val{font-size:24px;}
+    .kpi-icon{width:28px; height:28px;}
     .filters-grid{grid-template-columns:1fr;}
     .filter-wide{grid-column:auto;}
     .ms-panel{left:auto; right:0; max-width:calc(100vw - 64px);}
   }
+ 
+  .app-footer{
+    margin:16px 0 10px; padding:14px 20px 4px; display:flex; justify-content:center;
+    perspective:700px;
+  }
+  .footer-credit{
+    margin:0; display:flex; align-items:center; gap:10px;
+    cursor:default; user-select:none;
+  }
+  .footer-line{
+    width:24px; height:1px;
+    background:linear-gradient(90deg, transparent, var(--line-strong), transparent);
+  }
+  .footer-text{
+    font-family:"Fraunces","Georgia",serif; font-weight:600; font-size:13px; letter-spacing:.02em;
+    color:var(--accent-strong);
+    display:inline-block; transform-style:preserve-3d; transform:rotateX(14deg);
+    text-shadow:
+      0 1px 0 rgba(255,255,255,.3),
+      0 2px 0 rgba(0,0,0,.09),
+      0 3px 0 rgba(0,0,0,.09),
+      0 4px 1px rgba(0,0,0,.12),
+      0 6px 10px rgba(0,0,0,.18),
+      0 12px 22px rgba(0,0,0,.16);
+    transition:transform .5s cubic-bezier(.22,1,.36,1), text-shadow .5s ease;
+  }
+  .footer-credit:hover .footer-text{
+    transform:rotateX(0deg) translateY(-3px) scale(1.045);
+    text-shadow:
+      0 1px 0 rgba(255,255,255,.35),
+      0 2px 0 rgba(0,0,0,.09),
+      0 3px 0 rgba(0,0,0,.09),
+      0 4px 0 rgba(0,0,0,.1),
+      0 5px 1px rgba(0,0,0,.12),
+      0 10px 18px rgba(0,0,0,.22),
+      0 20px 32px rgba(0,0,0,.18);
+  }
+  .footer-name{ color:var(--amber); font-style:italic; }
+ 
+  /* Gently fades the credit while the initial CRM sync/login loading screen
+     is showing, then hands control back once revealFooterFromIntro() (see
+     script below) removes this class -- it returns to its normal always-on
+     appearance exactly as defined above. */
+  .app-footer{ transition: opacity .9s ease, filter .9s ease; }
+  @keyframes footerIntroFade{
+    0%{ opacity:1; filter:grayscale(0) saturate(1); }
+    35%{ opacity:1; filter:grayscale(0) saturate(1); }
+    100%{ opacity:0; filter:grayscale(1) saturate(.25); }
+  }
+  .app-footer.footer-intro{ animation: footerIntroFade 3s ease-in-out forwards; }
+  @media (max-width:640px){
+    .footer-text{font-size:11px;}
+    .footer-line{width:16px;}
+  }
 </style>
 </head>
 <body>
+ 
+ 
 <div class="app">
   <header class="topbar">
     <div class="brand">
-      <span class="brand-mark">AP</span>
+      <span class="brand-mark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 776 388" role="img" aria-label="Adit"><g transform="translate(0,388) scale(0.1,-0.1)" stroke="none"><g fill="#F4891F"><path d="M4580 3839 c-41 -5 -104 -15 -140 -23 -36 -8 -95 -18 -132 -21 -37 -4 -91 -13 -120 -21 -29 -7 -70 -14 -90 -14 -72 0 -68 32 -68 -591 0 -550 0 -559 -20 -559 -11 0 -68 15 -127 34 -111 35 -284 66 -369 66 -70 0 -334 -40 -364 -55 -14 -7 -40 -16 -58 -20 -38 -8 -144 -62 -222 -112 -69 -45 -204 -181 -251 -253 -30 -47 -58 -97 -111 -204 -18 -35 -50 -130 -63 -187 -7 -31 -18 -72 -24 -90 -15 -48 -32 -201 -38 -359 -6 -146 17 -404 42 -470 7 -19 16 -53 20 -74 4 -22 13 -49 21 -60 8 -11 14 -27 14 -36 0 -22 81 -177 125 -241 94 -134 233 -261 359 -328 33 -17 64 -35 70 -40 6 -5 22 -12 36 -15 14 -4 39 -14 55 -21 95 -43 278 -81 455 -95 106 -8 439 2 458 14 4 3 66 10 138 16 71 6 143 15 159 20 17 6 66 15 110 20 44 6 98 17 120 25 22 8 62 17 89 20 32 4 57 15 72 30 l24 24 0 952 c0 951 0 953 -21 983 -12 17 -36 42 -55 56 -43 31 -169 173 -196 220 -10 19 -30 53 -43 75 -14 22 -28 47 -31 55 -22 49 -39 94 -62 170 -24 79 -26 98 -27 280 0 178 2 202 24 270 31 100 62 182 77 200 6 8 14 23 17 32 15 42 116 179 179 242 40 40 67 75 64 83 -3 7 -9 12 -13 12 -4 -1 -42 -5 -83 -10z m-820 -1748 c125 -21 212 -51 248 -84 l22 -20 0 -648 c0 -485 -3 -650 -12 -655 -24 -15 -177 -34 -280 -34 -233 0 -387 71 -496 229 -23 34 -42 64 -42 68 0 3 -9 24 -19 47 -11 23 -30 73 -43 111 -21 65 -23 85 -23 305 0 194 3 243 17 280 9 25 19 59 23 75 16 72 96 196 157 245 46 35 115 64 193 81 105 22 120 22 255 0z"/><path d="M855 2711 c-44 -5 -105 -13 -135 -19 -30 -6 -88 -13 -128 -17 -40 -3 -90 -12 -110 -19 -20 -7 -61 -16 -89 -20 -64 -8 -143 -40 -143 -58 0 -7 5 -29 10 -48 6 -19 15 -73 20 -120 6 -47 17 -116 25 -155 8 -38 18 -99 22 -134 10 -84 21 -90 109 -63 38 12 98 26 134 32 36 5 88 15 115 21 28 6 154 11 280 12 227 1 231 0 298 -26 37 -15 82 -37 101 -49 80 -52 156 -208 156 -318 0 -71 -9 -84 -51 -77 -159 25 -212 28 -434 24 -142 -3 -252 -9 -270 -16 -16 -6 -64 -17 -105 -25 -75 -14 -170 -44 -206 -65 -10 -6 -30 -15 -44 -21 -91 -36 -234 -164 -298 -265 -31 -50 -64 -135 -74 -188 -6 -32 -17 -61 -24 -64 -21 -8 -20 -280 0 -302 8 -9 20 -46 26 -83 5 -37 16 -79 24 -95 7 -15 27 -55 42 -87 39 -80 168 -209 254 -256 80 -43 195 -90 219 -90 10 0 34 -7 53 -15 36 -14 111 -24 356 -47 105 -9 172 -9 310 0 330 23 436 33 492 46 30 8 83 17 117 20 35 4 84 13 110 21 27 7 74 16 106 20 42 5 60 12 68 26 16 30 7 1724 -9 1764 -6 17 -18 64 -26 105 -16 86 -43 168 -63 191 -7 8 -13 19 -13 24 0 15 -74 120 -119 168 -39 42 -181 147 -199 147 -4 0 -20 7 -37 16 -51 27 -137 55 -214 70 -41 8 -90 19 -110 24 -46 14 -440 21 -546 11z m537 -1510 c136 -12 128 6 128 -302 l0 -258 -32 -18 c-27 -14 -68 -18 -233 -21 -124 -2 -216 0 -242 7 -24 6 -62 16 -85 22 -46 11 -99 39 -137 73 -71 63 -95 229 -46 325 47 94 158 158 295 172 94 9 251 9 352 0z"/></g><g fill="#22A9E1"><path d="M5270 3391 c-134 -39 -242 -145 -274 -271 -49 -191 29 -369 200 -455 55 -28 66 -30 174 -30 102 0 120 3 164 25 78 40 166 134 196 211 34 87 35 201 2 276 -46 108 -99 165 -197 216 -52 27 -72 31 -150 33 -49 2 -101 -1 -115 -5z"/><path d="M6680 3393 c-14 -2 -56 -10 -95 -18 -38 -8 -96 -17 -127 -20 -65 -7 -82 -21 -70 -56 5 -13 17 -84 27 -157 19 -132 19 -134 -2 -270 -24 -156 -60 -273 -104 -342 -5 -8 -15 -26 -22 -40 -29 -60 -135 -197 -201 -259 l-36 -35 0 -599 c0 -486 3 -618 15 -705 27 -188 50 -282 84 -356 10 -23 22 -48 25 -56 22 -49 112 -166 159 -206 65 -56 77 -63 144 -100 106 -57 168 -77 343 -109 111 -20 386 -20 495 0 191 34 285 58 327 80 14 8 33 15 41 15 46 0 51 46 21 195 -8 39 -21 111 -30 160 -24 148 -38 200 -58 203 -10 2 -48 -5 -84 -17 -87 -26 -258 -51 -349 -51 -89 0 -193 23 -249 56 -70 41 -117 118 -150 249 -16 62 -19 128 -22 569 -3 459 -2 500 14 517 16 18 38 19 431 19 l413 0 10 26 c14 35 13 520 0 545 -10 18 -26 19 -424 19 -372 0 -415 2 -427 17 -11 13 -15 91 -19 372 l-5 356 -25 1 c-14 1 -36 0 -50 -3z"/><path d="M5710 2009 c-155 -50 -172 -53 -350 -52 -146 1 -185 4 -235 21 -33 10 -66 17 -72 15 -18 -7 -19 -1853 -1 -1871 9 -9 100 -12 350 -12 325 0 338 1 348 20 14 26 9 1865 -5 1878 -5 5 -21 5 -35 1z"/></g></g></svg></span>
       <div>
         <h1>Adit Pay Terminal Adoption Analyzer</h1>
-        <p>Upload terminal data to automatically generate adoption and processing-volume insights.</p>
       </div>
     </div>
     <div class="topbar-actions" id="topbarActions" hidden>
@@ -288,39 +464,58 @@
           <button data-export="pdf">Summary (.pdf)</button>
         </div>
       </div>
-      <button class="btn btn-ghost" id="btnNewFile">New file</button>
+      <button class="btn btn-ghost" id="btnSyncZoho" title="Pull the latest deals from Zoho CRM">Sync from Zoho</button>
+      <button class="btn btn-ghost" id="btnNewFile" title="Upload a new file to replace the current dataset">Replace Data</button>
+      <button class="btn btn-ghost" id="btnDataQuality" title="Show data quality validation detail">Data Quality</button>
+    </div>
+    <div class="topbar-user" id="topbarUser">
+      <img id="userAvatar" class="user-avatar" alt="" hidden>
+      <span id="userName" class="user-name"></span>
+      <a class="btn btn-ghost btn-sm" id="btnSignOut" href="/auth/logout" title="Sign out">Sign out</a>
     </div>
   </header>
-
+ 
   <main>
-    <section id="uploadSection" class="panel upload-panel">
+    <section id="initialLoading" class="panel" style="text-align:center; padding:56px 24px;">
+      <p class="panel-sub" style="margin:0;">Loading your dashboard&hellip;</p>
+    </section>
+    <section id="uploadSection" class="panel upload-panel" hidden>
       <p class="section-eyebrow">Step 1 &middot; 2</p>
       <h2>Upload raw deal data</h2>
       <p class="panel-sub">Drop the raw Adit Pay export below. Nothing is uploaded anywhere &mdash; the file is processed entirely in this browser tab.</p>
-
+ 
       <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload file">
         <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden />
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+        <span class="dropzone-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>
         <p>Drag &amp; drop your file, or <button type="button" id="browseBtn">browse</button></p>
         <p class="hint">.xlsx &middot; .xls &middot; .csv</p>
       </div>
-
+ 
+      <div style="display:flex; align-items:center; gap:10px; margin:18px 0; color:var(--ink-soft); font-size:13px;">
+        <span style="flex:1; height:1px; background:var(--line);"></span>
+        <span>or</span>
+        <span style="flex:1; height:1px; background:var(--line);"></span>
+      </div>
+ 
+      <button type="button" class="btn btn-ghost" id="btnLoadZohoInitial" style="width:100%; justify-content:center;" title="Pull deals from Zoho CRM">Load from Zoho CRM</button>
+ 
       <div class="file-meta" id="fileMeta" hidden></div>
       <div class="sheet-picker" id="sheetPicker" hidden></div>
       <div id="validationPanel" hidden></div>
-      <div id="generateRow" hidden style="margin-top:18px;">
-        <button class="btn btn-primary" id="generateBtn">Generate Analysis &rarr;</button>
+      <div class="generate-row" id="generateRow" hidden>
+        <button class="btn btn-primary btn-ai" id="generateBtn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.9L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.6L12 2.5z"/><path d="M19 13.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6L15.5 17l2.6-.9.9-2.6z"/></svg>
+          Adit AI Analyzer
+        </button>
       </div>
     </section>
-
+ 
     <section id="dashboard" hidden>
-      <div id="reconciliationBanner"></div>
-
       <section class="panel" id="filtersPanel" hidden>
         <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
           <div>
             <p class="section-eyebrow">Filters</p>
-            <h2 style="font-size:16px;">Narrow the dataset</h2>
+            <h2>Narrow the dataset</h2>
           </div>
         </div>
         <div class="filters-grid" id="filtersGrid" style="margin-top:14px;"></div>
@@ -329,14 +524,14 @@
           <button class="btn btn-sm" id="btnResetFilters">Reset filters</button>
         </div>
       </section>
-
+ 
       <section class="kpi-grid" id="kpiGrid"></section>
-
+ 
       <p class="narrative" id="narrativeStrip"></p>
-
+ 
       <section class="panel hero-panel">
         <p class="section-eyebrow">At a glance</p>
-        <h2 style="font-size:16px; margin-bottom:14px;">Adoption story</h2>
+        <h2 style="margin-bottom:14px;">Adoption story</h2>
         <div class="hero-grid">
           <div class="chart-card hero-card">
             <h3>Adoption rate</h3><p class="chart-sub">Adopted &divide; total terminal deals</p>
@@ -348,29 +543,51 @@
           </div>
         </div>
       </section>
-
+ 
       <section class="panel">
         <p class="section-eyebrow">Visual summary</p>
-        <h2 style="font-size:16px; margin-bottom:14px;">Volume tier breakdown</h2>
+        <h2 style="margin-bottom:14px;">Volume tier breakdown</h2>
         <div class="charts-grid" id="chartsGrid">
           <div class="chart-card"><h3>Adopted deals by volume tier</h3><p class="chart-sub">Volume range vs. deal count</p><div class="chart-wrap"><canvas id="chartAdoptedTier"></canvas></div></div>
           <div class="chart-card"><h3>Active deals by volume tier</h3><p class="chart-sub">Volume range vs. deal count</p><div class="chart-wrap"><canvas id="chartActiveTier"></canvas></div></div>
           <div class="chart-card"><h3>Adopted volume distribution</h3><p class="chart-sub">Volume range vs. total tier volume ($)</p><div class="chart-wrap"><canvas id="chartAdoptedVolume"></canvas></div></div>
         </div>
       </section>
-
+ 
+      <section class="panel">
+        <p class="section-eyebrow">Team performance</p>
+        <h2 style="margin-bottom:14px;">Adoption by CSM Pod</h2>
+        <p class="panel-sub">Top 10 CSM Pods by deal count in the current filter, ranked top to bottom by adoption rate.</p>
+        <div class="charts-grid" style="grid-template-columns:1fr;">
+          <div class="chart-card"><h3>Adoption rate by pod</h3><p class="chart-sub">Adopted &divide; total deals, per pod</p><div class="chart-wrap"><canvas id="chartCsmPod"></canvas></div></div>
+        </div>
+        <div id="csmPodTableWrap" style="margin-top:16px;"></div>
+      </section>
+ 
+      <section class="panel">
+        <p class="section-eyebrow">Trend</p>
+        <h2 style="margin-bottom:14px;">Monthly adoption trend (rolling 12 months)</h2>
+        <div class="charts-grid">
+          <div class="chart-card"><h3>Adopted deals by month</h3><p class="chart-sub">Count of deals adopted each month over the trailing 12 months, by Pay Adopt Date</p><div class="chart-wrap"><canvas id="chartAdoptedByMonth"></canvas></div></div>
+          <div class="chart-card"><h3>Deal status by stage</h3><p class="chart-sub">Active, Failed, and Adopted deal counts per Stage</p><div class="chart-wrap"><canvas id="chartStageBreakdown"></canvas></div></div>
+        </div>
+      </section>
+ 
       <section class="panel" id="adoptedSummarySection"></section>
       <section class="panel" id="activeSummarySection"></section>
       <section class="panel" id="granularSection"></section>
       <section class="panel" id="activeAnalysisSection"></section>
       <section class="panel" id="opportunitySection"></section>
-
+ 
       <section class="panel" id="explorerSection">
         <p class="section-eyebrow">Deal-level drilldown</p>
-        <h2 style="font-size:16px;">Explore every deal</h2>
+        <h2>Explore every deal</h2>
         <p class="panel-sub">Click any tier count above to jump here pre-filtered, or search and sort freely.</p>
         <div class="explorer-toolbar">
-          <input type="search" id="explorerSearch" placeholder="Search deal name, record #, CSM, pod, tech OB&hellip;">
+          <div class="search-wrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input type="search" id="explorerSearch" placeholder="Search deal name, record #, CSM, pod, tech OB&hellip;">
+          </div>
           <span class="filter-count" id="explorerCount"></span>
           <button class="btn btn-sm btn-ghost" id="explorerClearTier" hidden>Clear tier filter</button>
         </div>
@@ -382,19 +599,27 @@
         </div>
         <div class="pager" id="explorerPager"></div>
       </section>
-
-      <section class="panel" id="validationDetailSection"></section>
+ 
+      <section class="panel" id="validationDetailSection" hidden></section>
     </section>
   </main>
-
+ 
   <div class="modal" id="drilldownModal" hidden>
     <div class="modal-card">
       <header><h3 id="drilldownTitle"></h3><button class="modal-close" id="drilldownClose">&times;</button></header>
       <div class="modal-body" id="drilldownBody"></div>
     </div>
   </div>
+ 
+  <footer class="app-footer footer-intro">
+    <p class="footer-credit">
+      <span class="footer-line"></span>
+      <span class="footer-text">Designed &amp; Developed by <span class="footer-name">Imran</span></span>
+      <span class="footer-line"></span>
+    </p>
+  </footer>
 </div>
-
+ 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -402,11 +627,19 @@
 <script>
 (function(){
 "use strict";
-
+ 
 /* ============================== constants ============================== */
-
+ 
 var ADOPT_THRESHOLD = 5000;
-
+ 
+// Adoption status now comes directly from the CRM's own "Pay Score" field
+// (Active / Adopted / Fail), not a locally recomputed volume threshold --
+// Zoho already classifies each deal and that classification is the source
+// of truth. ADOPT_THRESHOLD above is kept only for the existing "how much
+// more volume an Active deal needs" opportunity metrics, which are still
+// useful supplementary info and unrelated to the Adopted/Active split.
+function statusOf(r){ return r.payScore==="Adopted" ? "Adopted" : "Active"; }
+ 
 var CANON_FIELDS = {
   dealName:        {label:"Deal Name",              aliases:["dealname"], required:true},
   recordNumber:    {label:"Record Number",           aliases:["recordnumber","recordno","recordnum","record#"], required:true},
@@ -423,9 +656,9 @@ var CANON_FIELDS = {
   agreementSignedDate: {label:"Agreement Signed Date", aliases:["agreementsigneddate","signeddate"], required:false}
 };
 var REQUIRED_KEYS = Object.keys(CANON_FIELDS).filter(function(k){return CANON_FIELDS[k].required;});
-
+ 
 function centsRange(label,minD,maxD){ return {label:label, min: minD==null?null:Math.round(minD*100), max: maxD==null?Infinity:Math.round(maxD*100)}; }
-
+ 
 var ADOPTED_TIERS = [
   centsRange("$5,000 - $7,500", 5000, 7500),
   centsRange("$7,501 - $10,000", 7500.01, 10000),
@@ -441,7 +674,7 @@ var ADOPTED_TIERS = [
   centsRange("$150,001 - $200,000", 150000.01, 200000),
   centsRange("$200,000+", 200000.01, null)
 ];
-
+ 
 var ACTIVE_TIERS = [
   centsRange("$0", 0, 0),
   centsRange("$0.01 - $500", 0.01, 500),
@@ -455,10 +688,11 @@ var ACTIVE_TIERS = [
   centsRange("$4,000.01 - $4,500", 4000.01, 4500),
   centsRange("$4,500.01 - $5,000", 4500.01, 4999.99)
 ];
-
+ 
 var GRANULAR_TIERS = [
-  centsRange("$5,000 - $7,500", 5000, 7500),
-  centsRange("$7,501 - $10,000", 7500.01, 10000),
+  // $5,000-$7,500 and $7,501-$10,000 are intentionally NOT repeated here --
+  // they're already shown, identically, in "1. Adopted Deals Summary" above.
+  // This table adds detail only for the $10,000-$30,000 band.
   centsRange("$10,001 - $12,500", 10000.01, 12500),
   centsRange("$12,501 - $15,000", 12500.01, 15000),
   centsRange("$15,001 - $17,500", 15000.01, 17500),
@@ -469,7 +703,7 @@ var GRANULAR_TIERS = [
   centsRange("$27,501 - $30,000", 27500.01, 30000),
   centsRange("$30,000+", 30000.01, null)
 ];
-
+ 
 function findTier(volume, tiers){
   var c = Math.round(volume*100);
   for (var i=0;i<tiers.length;i++){
@@ -478,22 +712,22 @@ function findTier(volume, tiers){
   }
   return tiers[tiers.length-1];
 }
-
+ 
 var CHART_COLORS = {
   adopted: "#2F6F5E", adoptedSoft:"rgba(47,111,94,.28)",
   active: "#B8702F", activeSoft:"rgba(184,112,47,.28)",
   danger: "#AE3B3B", grid:"rgba(120,120,110,.18)"
 };
-
+ 
 /* ============================== formatters ============================== */
-
+ 
 function fmtMoney(v){ if(v==null||isNaN(v)) return "$0"; var n=Number(v); var s=Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); return (n<0?"-$":"$")+s; }
 function fmtMoney0(v){ if(v==null||isNaN(v)) return "$0"; var n=Math.round(v); return (n<0?"-$":"$")+Math.abs(n).toLocaleString("en-US"); }
 function fmtInt(v){ if(v==null||isNaN(v)) return "0"; return Math.round(v).toLocaleString("en-US"); }
 function fmtPct(v,d){ if(v==null||isNaN(v)) return "0%"; return (v*100).toFixed(d==null?1:d)+"%"; }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];}); }
 function normHeader(h){ return String(h==null?"":h).trim().toLowerCase().replace(/[^a-z0-9]/g,""); }
-
+ 
 function excelSerialToDate(n){
   var utc = Math.round((n - 25569) * 86400 * 1000);
   return new Date(utc);
@@ -514,6 +748,18 @@ function parseDateLoose(v){
   }
   return null;
 }
+// Re-applies the existing date parser to rows that came back from the server
+// (JSON turns Date objects into ISO strings). Every other field is left
+// untouched, and the parsing logic itself is unchanged — this only restores
+// the same Date objects a fresh upload would have produced.
+function reviveProcessedRows(rows){
+  return (rows||[]).map(function(r){
+    var copy = Object.assign({}, r);
+    copy.payAdoptDate = parseDateLoose(r.payAdoptDate);
+    copy.agreementSignedDate = parseDateLoose(r.agreementSignedDate);
+    return copy;
+  });
+}
 function parseVolume(v){
   if (v==null || v==="" ) return {value:null, blank:true, valid:true};
   if (typeof v === "number"){ return {value:v, blank:false, valid:!isNaN(v)}; }
@@ -527,9 +773,9 @@ function parseVolume(v){
   if (neg) n = -Math.abs(n);
   return {value:n, blank:false, valid:true};
 }
-
+ 
 /* ============================== state ============================== */
-
+ 
 var App = {
   workbook:null, sheetNames:[], chosenSheet:null,
   fileName:null,
@@ -550,13 +796,13 @@ var App = {
   explorer:{ search:"", sortKey:"aditPayVolume", sortDir:"desc", page:1, pageSize:50, tierFilter:null },
   downloadsNs:null
 };
-
+ 
 /* ============================== file intake ============================== */
-
+ 
 var dropzone = document.getElementById("dropzone");
 var fileInput = document.getElementById("fileInput");
 var browseBtn = document.getElementById("browseBtn");
-
+ 
 browseBtn.addEventListener("click", function(e){ e.stopPropagation(); fileInput.click(); });
 dropzone.addEventListener("click", function(){ fileInput.click(); });
 dropzone.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ fileInput.click(); } });
@@ -574,9 +820,171 @@ fileInput.addEventListener("change", function(e){
   var f = e.target.files && e.target.files[0];
   if (f) handleFile(f);
 });
-
+ 
 document.getElementById("btnNewFile").addEventListener("click", function(){ location_reset(); });
-
+ 
+document.getElementById("btnDataQuality").addEventListener("click", function(){
+  var section = document.getElementById("validationDetailSection");
+  section.hidden = !section.hidden;
+  if (!section.hidden) section.scrollIntoView({behavior:"smooth", block:"start"});
+});
+ 
+document.getElementById("btnSyncZoho").addEventListener("click", function(){
+  var btn = document.getElementById("btnSyncZoho");
+  var original = btn.textContent;
+  btn.disabled = true; btn.textContent = "Syncing…";
+  loadFromZoho({silent:false}).then(function(){
+    btn.disabled = false; btn.textContent = original;
+  }).catch(function(err){
+    btn.disabled = false; btn.textContent = original;
+    alert("Zoho sync failed: " + ((err && err.message) || err));
+  });
+});
+ 
+// The topbar's "Sync from Zoho" only exists once a dashboard is already
+// showing, so a signed-in user with no stored dataset yet (e.g. right after
+// a redeploy) previously had no way to load Zoho data at all — only the file
+// upload. This mirrors the same loadFromZoho() call from the initial upload
+// screen itself.
+document.getElementById("btnLoadZohoInitial").addEventListener("click", function(){
+  var btn = document.getElementById("btnLoadZohoInitial");
+  var original = btn.textContent;
+  btn.disabled = true; btn.textContent = "Loading from Zoho…";
+  loadFromZoho({silent:false}).then(function(){
+    btn.disabled = false; btn.textContent = original;
+  }).catch(function(err){
+    btn.disabled = false; btn.textContent = original;
+    alert("Zoho load failed: " + ((err && err.message) || err));
+  });
+});
+ 
+fetch("/auth/me").then(function(r){ return r.ok ? r.json() : null; }).then(function(me){
+  if (!me) return;
+  var nameEl = document.getElementById("userName");
+  var avatarEl = document.getElementById("userAvatar");
+  if (nameEl) nameEl.textContent = me.name || me.email || "";
+  if (avatarEl && me.picture){ avatarEl.src = me.picture; avatarEl.hidden = false; }
+}).catch(function(){});
+ 
+// Pulls live deal data from Zoho CRM (via the server, which alone holds the
+// credentials) and runs it through the exact same column-mapping/validation
+// pipeline an uploaded spreadsheet already uses (buildColumnMap + REQUIRED_KEYS
+// + runValidation) — so nothing about how a dataset is validated, calculated,
+// or displayed differs by source. Used both for the automatic post-login
+// load below and for the manual "Sync from Zoho" button.
+// opts.silent=true (auto-load path): resolves to false instead of showing a
+// "missing columns" error screen, so the caller can quietly fall back to the
+// last stored dataset when Zoho isn't configured/reachable/mapped yet.
+function loadFromZoho(opts){
+  opts = opts || {};
+  // A silent (automatic) call is served from the server's warm cache for
+  // speed; an explicit user-triggered sync (the "Sync from Zoho" / "Load
+  // from Zoho CRM" buttons) asks for a real live pull via ?fresh=1.
+  var zohoUrl = "/api/zoho/deals" + (opts.silent ? "" : "?fresh=1");
+  return fetch(zohoUrl).then(function(r){
+    return r.json().catch(function(){ return null; }).then(function(data){ return {ok:r.ok, data:data}; });
+  }).then(function(res){
+    if (!res.ok || !res.data){
+      throw new Error((res.data && res.data.error) || "Could not reach Zoho CRM.");
+    }
+    var headers = res.data.headers, rows = res.data.rows;
+    if (!Array.isArray(headers) || !Array.isArray(rows) || !rows.length){
+      throw new Error("Zoho CRM returned no deal records.");
+    }
+    buildColumnMap(headers);
+    var missing = REQUIRED_KEYS.filter(function(k){ return !App.colMap[k]; });
+    if (missing.length && opts.silent){
+      throw new Error("Zoho fields for one or more required columns are not mapped yet.");
+    }
+    document.getElementById("initialLoading").hidden = true;
+    revealFooterFromIntro();
+    App.fileName = "Zoho CRM (synced " + new Date().toLocaleString() + ")";
+    App.chosenSheet = "Zoho CRM";
+    App.headers = headers;
+    App.allDataRows = rows;
+    renderFileMeta(missing);
+    if (missing.length){
+      renderValidation({stop:true, missing:missing});
+      document.getElementById("generateRow").hidden = true;
+      return true;
+    }
+    runValidation();
+    return true;
+  });
+}
+ 
+// Removes the intro fade class from the "Designed & Developed by Imran"
+// footer credit once the initial loading screen has gone away (success,
+// cached-instant load, or fallback to the manual upload screen) -- see the
+// .footer-intro rule in <style> for the fade-out itself.
+function revealFooterFromIntro(){
+  var footerEl = document.querySelector(".app-footer");
+  if (footerEl) footerEl.classList.remove("footer-intro");
+}
+ 
+// On page load, load data automatically so every signed-in user sees a
+// dashboard right after login instead of an empty upload screen.
+//
+// Any dataset already cached on the server (from a prior Zoho sync or a
+// manual upload) renders INSTANTLY, without ever waiting on a live Zoho
+// call. A Zoho refresh is then kicked off quietly in the background: if it
+// succeeds, runValidation()'s existing proceedToDashboard()/persistDataset()
+// calls silently re-render and re-cache the dashboard with fresh data (safe
+// to call more than once — renderCharts() tears down and rebuilds its
+// charts every time). If the background refresh fails or isn't ready yet,
+// the cached dashboard the user is already looking at simply stays as-is.
+//
+// Only on a true first-ever sync — nothing cached yet — does this wait on
+// Zoho before showing anything, since there's nothing else to show. The
+// loading message says a first sync can take a few minutes, so it doesn't
+// read as stuck. If that first attempt fails too, this falls back to the
+// upload screen, which still offers "Load from Zoho CRM" as a manual retry.
+function tryAutoLoadDataset(){
+  loadStoredDataset().then(function(hadCache){
+    if (hadCache){
+      loadFromZoho({silent:true}).catch(function(err){
+        console.warn("Background Zoho refresh failed, keeping the cached dashboard:", err);
+      });
+      return;
+    }
+    var loadingMsg = document.querySelector("#initialLoading .panel-sub");
+    if (loadingMsg) loadingMsg.textContent = "Loading your dashboard… the first sync can take a few minutes while we pull your CRM data.";
+    loadFromZoho({silent:true}).catch(function(err){
+      console.warn("Zoho auto-load not available yet, falling back to the upload screen:", err);
+      document.getElementById("initialLoading").hidden = true;
+      revealFooterFromIntro();
+      document.getElementById("uploadSection").hidden = false;
+    });
+  });
+}
+ 
+// Loads the last dataset cached on the server (from a prior Zoho sync or
+// manual upload), if any, and renders it immediately via the same path a
+// manual upload uses. Resolves true if a cached dataset was found and
+// rendered, false otherwise. Never shows the upload screen itself on a
+// miss — the caller decides what to do next (e.g. try Zoho live).
+function loadStoredDataset(){
+  return fetch("/api/dataset").then(function(r){ return r.ok ? r.json() : null; }).then(function(data){
+    if (!data || !data.exists || !data.processed || !data.processed.length){
+      return false;
+    }
+    App.fileName = data.fileName || null;
+    App.processed = reviveProcessedRows(data.processed);
+    App.validation = data.validation || {
+      totalRows: App.processed.length, validRecords: App.processed.length,
+      warnRecords: 0, excludedRecords: 0, includedRecords: App.processed.length, issues: []
+    };
+    document.getElementById("initialLoading").hidden = true;
+    revealFooterFromIntro();
+    proceedToDashboard();
+    return true;
+  }).catch(function(err){
+    console.warn("Could not auto-load previous dataset:", err);
+    return false;
+  });
+}
+tryAutoLoadDataset();
+ 
 function location_reset(){
   App.workbook=null; App.sheetNames=[]; App.chosenSheet=null; App.fileName=null;
   App.headers=[]; App.colMap={}; App.allDataRows=[]; App.validation=null; App.processed=[];
@@ -588,9 +996,10 @@ function location_reset(){
   document.getElementById("dashboard").hidden=true;
   document.getElementById("topbarActions").hidden=true;
   document.getElementById("uploadSection").hidden=false;
+  document.getElementById("dropzone").hidden=false;
   destroyCharts();
 }
-
+ 
 function handleFile(file){
   App.fileName = file.name;
   var ext = (file.name.split(".").pop()||"").toLowerCase();
@@ -612,25 +1021,16 @@ function handleFile(file){
   };
   if (ext === "csv") reader.readAsText(file); else reader.readAsArrayBuffer(file);
 }
-
+ 
 function chooseInitialSheet(){
-  var picker = document.getElementById("sheetPicker");
+  // Auto-detect the raw-data worksheet silently — no confirmation step shown to the user.
   var match = App.sheetNames.find(function(n){ var nn=n.trim().toLowerCase(); return nn==="sheet0"||nn==="sheet 0"; });
   if (!match) match = App.sheetNames.find(function(n){ return n.trim().toLowerCase()==="zero"; });
-
-  if (match && App.sheetNames.length===1){
-    picker.hidden = true;
-    loadSheet(match);
-    return;
-  }
-  if (match){
-    // still show a lightweight picker so the user can override, pre-selected to the match
-    renderSheetPicker(match);
-  } else {
-    renderSheetPicker(App.sheetNames[0]);
-  }
+  if (!match) match = App.sheetNames[0];
+  document.getElementById("sheetPicker").hidden = true;
+  loadSheet(match);
 }
-
+ 
 function renderSheetPicker(preselect){
   var picker = document.getElementById("sheetPicker");
   var opts = App.sheetNames.map(function(n){
@@ -650,7 +1050,7 @@ function renderSheetPicker(preselect){
     loadSheet(document.getElementById("sheetSelect").value);
   });
 }
-
+ 
 function loadSheet(sheetName){
   App.chosenSheet = sheetName;
   var ws = App.workbook.Sheets[sheetName];
@@ -659,10 +1059,10 @@ function loadSheet(sheetName){
   var rawHeaders = aoa[0].map(function(h){ return h==null? "": String(h).trim(); });
   App.headers = rawHeaders;
   buildColumnMap(rawHeaders);
-
+ 
   var missing = REQUIRED_KEYS.filter(function(k){ return !App.colMap[k]; });
   App.allDataRows = aoa.slice(1);
-
+ 
   renderFileMeta(missing);
   if (missing.length){
     renderValidation({stop:true, missing:missing});
@@ -671,7 +1071,7 @@ function loadSheet(sheetName){
   }
   runValidation();
 }
-
+ 
 function buildColumnMap(rawHeaders){
   App.colMap = {};
   var normed = rawHeaders.map(normHeader);
@@ -682,90 +1082,95 @@ function buildColumnMap(rawHeaders){
     }
   });
 }
-
+ 
 function renderFileMeta(missing){
   var el = document.getElementById("fileMeta");
   el.hidden = false;
+  document.getElementById("dropzone").hidden = true;
   el.innerHTML =
     fmItem("File", App.fileName) +
     fmItem("Rows found", fmtInt(App.allDataRows.length)) +
     fmItem("Worksheet", App.chosenSheet) +
     fmItem("Status", missing.length ? '<span class="badge badge-bad">Missing required columns</span>' : '<span class="badge badge-ok">Columns recognized</span>');
-  document.getElementById("sheetPicker").hidden = !!document.getElementById("sheetSelect") ? document.getElementById("sheetPicker").hidden : true;
+  document.getElementById("sheetPicker").hidden = true;
 }
 function fmItem(label,val){ return '<div class="fm-item"><span class="fm-label">'+esc(label)+'</span><span class="fm-val">'+val+'</span></div>'; }
-
+ 
 /* ============================== validation ============================== */
-
+ 
 function runValidation(){
   var idx = {};
   Object.keys(App.colMap).forEach(function(k){ idx[k] = App.headers.indexOf(App.colMap[k]); });
-
-  var totalRows = App.allDataRows.length;
+ 
+  // Fully blank rows (every cell empty) are spreadsheet artifacts -- e.g. trailing
+  // empty rows after the real data ends -- not real records. Drop them entirely
+  // here: not counted, not flagged, not shown anywhere in the tool.
+  var dataRows = [];
+  App.allDataRows.forEach(function(raw, i){
+    var isBlank = raw.every(function(c){ return c==null || String(c).trim()===""; });
+    if (!isBlank) dataRows.push({raw:raw, rowNum:i+2});
+  });
+ 
+  var totalRows = dataRows.length;
   var seenRecordNumbers = {};
-  App.allDataRows.forEach(function(r){
+  dataRows.forEach(function(d){
+    var r = d.raw;
     var rn = idx.recordNumber!=null && idx.recordNumber>=0 ? r[idx.recordNumber] : null;
     if (rn!=null && String(rn).trim()!==""){
       var key = String(rn).trim();
       seenRecordNumbers[key] = (seenRecordNumbers[key]||0)+1;
     }
   });
-
+ 
   var rows = [];
   var excludedCount=0, warnCount=0, cleanCount=0;
   var issues = []; // {rowNum, reason, severity, detail}
-
-  App.allDataRows.forEach(function(raw, i){
-    var rowNum = i+2; // account for header row, 1-indexed sheet rows
-    var isBlank = raw.every(function(c){ return c==null || String(c).trim()===""; });
-    if (isBlank){
-      excludedCount++;
-      issues.push({rowNum:rowNum, severity:"excluded", reason:"Blank row", detail:"All fields empty"});
-      return;
-    }
-
+ 
+  dataRows.forEach(function(d){
+    var raw = d.raw, rowNum = d.rowNum; // account for header row, 1-indexed sheet rows
+ 
     function get(key){ var i2=idx[key]; return (i2!=null && i2>=0) ? raw[i2] : null; }
-
+ 
     var dealName = get("dealName");
     var recordNumber = get("recordNumber");
     var terminalCount = get("terminalCount");
     var volRaw = get("aditPayVolume");
     var payStatus = get("payStatus");
-
+ 
     var volParsed = parseVolume(volRaw);
     var warnings = [];
     var excludeReason = null;
-
+ 
     if (!volParsed.valid){
       excludeReason = "Non-numeric Adit Pay Volume (“"+esc(String(volRaw))+"”)";
     } else if (!volParsed.blank && volParsed.value < 0){
       excludeReason = "Negative Adit Pay Volume ("+fmtMoney(volParsed.value)+")";
     }
-
+ 
     var recordKey = (recordNumber!=null && String(recordNumber).trim()!=="") ? String(recordNumber).trim() : null;
     if (!recordKey){ warnings.push("Missing Record Number"); }
     else if (seenRecordNumbers[recordKey] > 1){ warnings.push("Duplicate Record Number (“"+esc(recordKey)+"” appears "+seenRecordNumbers[recordKey]+"×)"); }
-
+ 
     if (dealName==null || String(dealName).trim()===""){ warnings.push("Blank Deal Name"); }
     if (terminalCount==null || String(terminalCount).trim()===""){ warnings.push("Missing Terminal Count"); }
-
+ 
     var blankVolAssumedZero = false;
     if (volParsed.valid && volParsed.blank){ warnings.push("Blank Adit Pay Volume — assumed $0"); blankVolAssumedZero = true; }
-
+ 
     if (payStatus!=null && String(payStatus).trim()!==""){
       var psn = String(payStatus).trim().toLowerCase();
       if (psn!=="enabled" && psn!=="disabled"){ warnings.push("Unexpected Pay Status value (“"+esc(String(payStatus))+"”)"); }
     }
-
+ 
     if (excludeReason){
       excludedCount++;
       issues.push({rowNum:rowNum, severity:"excluded", reason:excludeReason, detail:dealName||"(unnamed)"});
       return;
     }
-
+ 
     if (warnings.length){ warnCount++; warnings.forEach(function(w){ issues.push({rowNum:rowNum, severity:"warning", reason:w, detail:dealName||"(unnamed)"}); }); }
     else { cleanCount++; }
-
+ 
     var effVol = volParsed.blank ? 0 : volParsed.value;
     rows.push({
       _rowNum: rowNum,
@@ -788,7 +1193,7 @@ function runValidation(){
       agreementSignedDate: parseDateLoose(get("agreementSignedDate"))
     });
   });
-
+ 
   App.processed = rows;
   App.validation = {
     totalRows: totalRows,
@@ -798,15 +1203,28 @@ function runValidation(){
     includedRecords: rows.length,
     issues: issues
   };
-
+ 
   renderValidation({stop:false});
-  document.getElementById("generateRow").hidden = false;
+  proceedToDashboard();
+  persistDataset();
 }
-
+ 
+// Saves the freshly-processed dataset on the server so it's there next time
+// anyone signs in. Fire-and-forget: it never blocks or alters the upload flow
+// above, and a failure here just means the next login falls back to the
+// upload screen as before.
+function persistDataset(){
+  fetch("/api/dataset", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileName: App.fileName, processed: App.processed, validation: App.validation })
+  }).catch(function(err){ console.warn("Could not save dataset for next login:", err); });
+}
+ 
 function renderValidation(opts){
   var panel = document.getElementById("validationPanel");
   panel.hidden = false;
-
+ 
   if (opts.stop){
     panel.innerHTML =
       '<div class="val-tile bad" style="border-color:var(--danger);">'+
@@ -817,20 +1235,20 @@ function renderValidation(opts){
       '</div>';
     return;
   }
-
+ 
   var v = App.validation;
   var tiles =
     valTile(fmtInt(v.totalRows), "Total rows uploaded", "") +
     valTile(fmtInt(v.validRecords), "Valid records", "") +
     valTile(fmtInt(v.warnRecords), "Records with warnings", v.warnRecords? "warn":"") +
     valTile(fmtInt(v.excludedRecords), "Records excluded", v.excludedRecords? "bad":"");
-
+ 
   var issuesRows = v.issues.slice(0,500).map(function(is){
     return "<tr><td>"+is.rowNum+"</td><td>"+esc(is.detail)+"</td>"+
       '<td><span class="badge '+(is.severity==="excluded"?"badge-bad":"badge-warn")+'">'+(is.severity==="excluded"?"Excluded":"Warning")+"</span></td>"+
       "<td>"+esc(is.reason)+"</td></tr>";
   }).join("");
-
+ 
   panel.innerHTML =
     '<h3 style="font-size:15px;margin:18px 0 2px;">Data validation</h3>'+
     '<p class="panel-sub" style="margin-top:2px;">Every row is kept and shown below &mdash; nothing is silently dropped.</p>'+
@@ -841,8 +1259,8 @@ function renderValidation(opts){
     ) : '<p style="font-size:13px;color:var(--ink-soft);">No data quality issues found.</p>');
 }
 function valTile(num,label,cls){ return '<div class="val-tile '+cls+'"><div class="vt-num">'+num+'</div><div class="vt-label">'+esc(label)+'</div></div>'; }
-
-document.getElementById("generateBtn").addEventListener("click", function(){
+ 
+function proceedToDashboard(){
   buildDistinctValues();
   buildFilterUI();
   document.getElementById("uploadSection").hidden = true;
@@ -850,10 +1268,21 @@ document.getElementById("generateBtn").addEventListener("click", function(){
   document.getElementById("topbarActions").hidden = false;
   renderAll();
   window.scrollTo({top:0, behavior:"smooth"});
+}
+document.getElementById("generateBtn").addEventListener("click", proceedToDashboard);
+ 
+// Wired once here (not inside buildFilterUI, which can run more than once --
+// e.g. a silent background Zoho refresh re-renders the dashboard after the
+// cached version already loaded) so repeat calls never stack duplicate click
+// listeners on these two static buttons, which previously made the Filters
+// toggle cancel itself out after any such re-render.
+document.getElementById("btnToggleFilters").addEventListener("click", function(){
+  var p = document.getElementById("filtersPanel"); p.hidden = !p.hidden;
 });
-
+document.getElementById("btnResetFilters").addEventListener("click", resetFilters);
+ 
 /* ============================== filters ============================== */
-
+ 
 function buildDistinctValues(){
   function distinct(key){
     var set = {};
@@ -868,10 +1297,10 @@ function buildDistinctValues(){
     App.filters[k] = {};
   });
 }
-
+ 
 function buildFilterUI(){
   var grid = document.getElementById("filtersGrid");
-
+ 
   function msGroup(id,label,values,filterKey){
     var opts = values.map(function(v){
       return '<label><input type="checkbox" data-ms="'+filterKey+'" value="'+esc(v)+'"> '+esc(v)+'</label>';
@@ -881,34 +1310,34 @@ function buildFilterUI(){
       '<div class="ms-panel"><input type="search" placeholder="Filter…" data-mssearch="'+filterKey+'">'+
       '<div data-msopts="'+filterKey+'">'+opts+'</div></div></details></div>';
   }
-
+ 
   grid.innerHTML =
     '<div class="filter-group"><label>Adoption Status</label>'+
       '<div style="display:flex;gap:12px;padding-top:4px;">'+
       '<label style="display:flex;gap:5px;align-items:center;font-weight:400;font-size:13px;"><input type="checkbox" id="fAdopted" checked> Adopted</label>'+
       '<label style="display:flex;gap:5px;align-items:center;font-weight:400;font-size:13px;"><input type="checkbox" id="fActive" checked> Active</label>'+
       '</div></div>'+
-
+ 
     '<div class="filter-group"><label>Date field</label>'+
       '<select id="fDateField"><option value="agreementSignedDate">Agreement Signed Date</option><option value="payAdoptDate">Pay Adopt Date</option></select></div>'+
-
+ 
     '<div class="filter-group filter-wide"><label>Date range</label>'+
       '<div class="preset-row" id="datePresets">'+
         ['This Month','Last Month','Last 30 Days','Last 90 Days','YTD'].map(function(p){return '<button type="button" data-preset="'+p+'">'+p+'</button>';}).join("")+
         '<button type="button" data-preset="All">All time</button>'+
       '</div>'+
       '<div class="range-row"><input type="date" id="fDateFrom"><input type="date" id="fDateTo"></div></div>'+
-
+ 
     msGroup("msStage","Stage",App.distinctValues.stage,"stage") +
     msGroup("msPayStatus","Pay Status",App.distinctValues.payStatus,"payStatus") +
     msGroup("msPackage","Package",App.distinctValues.package,"package") +
     msGroup("msCsm","CSM",App.distinctValues.csm,"csm") +
     msGroup("msCsmPod","CSM Pod",App.distinctValues.csmPod,"csmPod") +
     msGroup("msTechOb","Tech OB",App.distinctValues.techOb,"techOb") +
-
+ 
     '<div class="filter-group"><label>Terminal Count</label><div class="range-row"><input type="number" id="fTermMin" placeholder="Min"><input type="number" id="fTermMax" placeholder="Max"></div></div>'+
     '<div class="filter-group"><label>Adit Pay Volume ($)</label><div class="range-row"><input type="number" id="fVolMin" placeholder="Min"><input type="number" id="fVolMax" placeholder="Max"></div></div>';
-
+ 
   document.getElementById("fAdopted").addEventListener("change", function(e){ App.filters.adoptionStatus.Adopted = e.target.checked; refresh(); });
   document.getElementById("fActive").addEventListener("change", function(e){ App.filters.adoptionStatus.Active = e.target.checked; refresh(); });
   document.getElementById("fDateField").addEventListener("change", function(e){ App.filters.dateField = e.target.value; refresh(); });
@@ -922,7 +1351,7 @@ function buildFilterUI(){
   document.getElementById("fTermMax").addEventListener("input", debounce(function(e){ App.filters.terminalMax = e.target.value===""?null:Number(e.target.value); refresh(); }));
   document.getElementById("fVolMin").addEventListener("input", debounce(function(e){ App.filters.volMin = e.target.value===""?null:Number(e.target.value); refresh(); }));
   document.getElementById("fVolMax").addEventListener("input", debounce(function(e){ App.filters.volMax = e.target.value===""?null:Number(e.target.value); refresh(); }));
-
+ 
   ["stage","payStatus","package","csm","csmPod","techOb"].forEach(function(key){
     grid.querySelectorAll('input[data-ms="'+key+'"]').forEach(function(cb){
       cb.addEventListener("change", function(){
@@ -938,20 +1367,16 @@ function buildFilterUI(){
       });
     });
   });
-
-  document.getElementById("btnToggleFilters").addEventListener("click", function(){
-    var p = document.getElementById("filtersPanel"); p.hidden = !p.hidden;
-  });
-  document.getElementById("btnResetFilters").addEventListener("click", resetFilters);
+ 
 }
-
+ 
 function updateMsSummary(key){
   var chosen = Object.keys(App.filters[key]);
   var idMap = {stage:"msStage",payStatus:"msPayStatus",package:"msPackage",csm:"msCsm",csmPod:"msCsmPod",techOb:"msTechOb"};
   var sumEl = document.getElementById(idMap[key]+"Sum");
   if (sumEl) sumEl.textContent = chosen.length ? chosen.length+" selected" : "All";
 }
-
+ 
 function setActivePreset(name){
   document.querySelectorAll("#datePresets button").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-preset")===name); });
 }
@@ -972,7 +1397,7 @@ function applyDatePreset(preset){
   document.getElementById("fDateTo").value = App.filters.dateTo||"";
   refresh();
 }
-
+ 
 function resetFilters(){
   App.filters.adoptionStatus = {Adopted:true, Active:true};
   App.filters.dateField = "agreementSignedDate";
@@ -984,32 +1409,32 @@ function resetFilters(){
   document.getElementById("filtersPanel").hidden = false;
   refresh();
 }
-
+ 
 function debounce(fn,ms){ var t; return function(){ var a=arguments,ctx=this; clearTimeout(t); t=setTimeout(function(){fn.apply(ctx,a);}, ms||250); }; }
-
+ 
 function matchesFilters(r){
-  var status = r.aditPayVolume >= ADOPT_THRESHOLD ? "Adopted" : "Active";
+  var status = statusOf(r);
   if (!App.filters.adoptionStatus[status]) return false;
-
+ 
   var dateVal = r[App.filters.dateField];
   if (App.filters.dateFrom){ if (!dateVal || dateVal < new Date(App.filters.dateFrom)) return false; }
   if (App.filters.dateTo){ if (!dateVal || dateVal > new Date(App.filters.dateTo+"T23:59:59")) return false; }
-
+ 
   function msOk(key){
     var chosen = Object.keys(App.filters[key]);
     if (!chosen.length) return true;
     var v = r[key]; return v!=null && chosen.indexOf(String(v).trim())!==-1;
   }
   if (!msOk("stage")||!msOk("payStatus")||!msOk("package")||!msOk("csm")||!msOk("csmPod")||!msOk("techOb")) return false;
-
+ 
   if (App.filters.terminalMin!=null && (r.terminalCount==null || Number(r.terminalCount) < App.filters.terminalMin)) return false;
   if (App.filters.terminalMax!=null && (r.terminalCount==null || Number(r.terminalCount) > App.filters.terminalMax)) return false;
   if (App.filters.volMin!=null && r.aditPayVolume < App.filters.volMin) return false;
   if (App.filters.volMax!=null && r.aditPayVolume > App.filters.volMax) return false;
-
+ 
   return true;
 }
-
+ 
 function getFilteredRows(){ return App.processed.filter(matchesFilters); }
 function countActiveFilters(){
   var n=0; var f=App.filters;
@@ -1020,15 +1445,15 @@ function countActiveFilters(){
   if (f.volMin!=null||f.volMax!=null) n++;
   return n;
 }
-
+ 
 /* ============================== aggregation ============================== */
-
+ 
 function aggregate(rows){
-  var adopted = rows.filter(function(r){ return r.aditPayVolume >= ADOPT_THRESHOLD; });
-  var active = rows.filter(function(r){ return r.aditPayVolume < ADOPT_THRESHOLD; });
+  var adopted = rows.filter(function(r){ return statusOf(r)==="Adopted"; });
+  var active = rows.filter(function(r){ return statusOf(r)!=="Adopted"; });
   var totalAdoptedVolume = sumBy(adopted,"aditPayVolume");
   var totalActiveVolume = sumBy(active,"aditPayVolume");
-
+ 
   function tierize(list, tiers, totalForPct){
     var cum = 0;
     return tiers.map(function(t){
@@ -1041,80 +1466,121 @@ function aggregate(rows){
       };
     });
   }
-
+ 
+  // Active vs Failed split (by Pay Score) -- see statusOf(). Every "Fail"
+  // deal has $0 Adit Pay Volume, so excluding Fail deals only ever changes
+  // the "$0" active tier/bucket; every other active tier/bucket, and the
+  // Active Volume figures (all $0 for Fail deals), are unaffected either way.
+  // agg.activeCount / agg.active stay the combined Active+Fail figure for
+  // anything that still needs it (e.g. the narrative strip).
+  var failCount = active.filter(function(r){ return r.payScore==="Fail"; }).length;
+  var activeOnlyCount = active.length - failCount;
+  var activeOnly = active.filter(function(r){ return r.payScore!=="Fail"; });
+ 
   var adoptedTiers = tierize(adopted, ADOPTED_TIERS, adopted.length);
-  var activeTiers = tierize(active, ACTIVE_TIERS, active.length);
+  var activeTiers = tierize(activeOnly, ACTIVE_TIERS, activeOnly.length);
   var granularTiers = tierize(adopted, GRANULAR_TIERS, adopted.length);
-
+ 
   var total = rows.length;
   var target = function(p){ return Math.ceil(total*p); };
   var need = function(p){ return Math.max(0, target(p) - adopted.length); };
-
+ 
   var potentialVolumeOpportunity = sumBy(active, function(r){ return ADOPT_THRESHOLD - r.aditPayVolume; });
-
-  var near = active.filter(function(r){ return r.aditPayVolume > 4000; }).length;
-  var mid = active.filter(function(r){ return r.aditPayVolume > 2500 && r.aditPayVolume <= 4000; }).length;
-  var low = active.filter(function(r){ return r.aditPayVolume <= 2500; }).length;
-
+ 
+  var near = activeOnly.filter(function(r){ return r.aditPayVolume > 4000; }).length;
+  var mid = activeOnly.filter(function(r){ return r.aditPayVolume > 2500 && r.aditPayVolume <= 4000; }).length;
+  var low = activeOnly.filter(function(r){ return r.aditPayVolume <= 2500; }).length;
+ 
   var activeBuckets = {
-    at0: active.filter(function(r){return r.aditPayVolume===0;}).length,
-    to500: active.filter(function(r){return r.aditPayVolume>0 && r.aditPayVolume<=500;}).length,
-    to1000: active.filter(function(r){return r.aditPayVolume>500 && r.aditPayVolume<=1000;}).length,
-    to2500: active.filter(function(r){return r.aditPayVolume>1000 && r.aditPayVolume<=2500;}).length,
-    to5000: active.filter(function(r){return r.aditPayVolume>2500 && r.aditPayVolume<5000;}).length
+    at0: activeOnly.filter(function(r){return r.aditPayVolume===0;}).length,
+    to500: activeOnly.filter(function(r){return r.aditPayVolume>0 && r.aditPayVolume<=500;}).length,
+    to1000: activeOnly.filter(function(r){return r.aditPayVolume>500 && r.aditPayVolume<=1000;}).length,
+    to2500: activeOnly.filter(function(r){return r.aditPayVolume>1000 && r.aditPayVolume<=2500;}).length,
+    to5000: activeOnly.filter(function(r){return r.aditPayVolume>2500 && r.aditPayVolume<5000;}).length
   };
-
+ 
+  // Adoption by CSM Pod: total vs. adopted deals per pod, across ALL rows in
+  // the current filter (not just Adopted/Active) so each pod's own adoption
+  // rate is shown. Grouped case-insensitively (trimmed) since the same pod
+  // name can appear with inconsistent casing in the source data; the most
+  // common original casing seen for each group is kept as the display label.
+  // Rows with no CSM Pod assigned are excluded entirely (not bucketed into
+  // an "Other" pod).
+  var podMap = {};
+  rows.forEach(function(r){
+    var raw = (r.csmPod||"").trim();
+    if (!raw) return;
+    var key = raw.toLowerCase();
+    if (!podMap[key]) podMap[key] = { labels:{}, total:0, adopted:0, volume:0, members:[] };
+    var p = podMap[key];
+    p.labels[raw] = (p.labels[raw]||0) + 1;
+    p.total++;
+    p.members.push(r);
+    if (statusOf(r)==="Adopted") { p.adopted++; p.volume += (r.aditPayVolume||0); }
+  });
+  var csmPods = Object.keys(podMap).map(function(key){
+    var p = podMap[key];
+    var label = Object.keys(p.labels).sort(function(a,b){ return p.labels[b]-p.labels[a]; })[0];
+    return { label:label, total:p.total, adopted:p.adopted, rate: p.total? p.adopted/p.total : 0, volume:p.volume, members:p.members };
+  });
+  // Top 10 pods by deal count, then ranked top-to-bottom by adoption rate --
+  // just the 10 largest pods, no catch-all "Other pods" bucket.
+  csmPods.sort(function(a,b){ return b.total-a.total; });
+  csmPods = csmPods.slice(0,10);
+  csmPods.sort(function(a,b){ return b.rate-a.rate; });
+ 
   return {
     total: total, adopted: adopted, active: active,
     adoptedCount: adopted.length, activeCount: active.length,
+    activeOnlyCount: activeOnlyCount, failCount: failCount,
     adoptionRate: total? adopted.length/total : 0,
     totalAdoptedVolume: totalAdoptedVolume, totalActiveVolume: totalActiveVolume,
     totalVolume: totalAdoptedVolume+totalActiveVolume,
     avgAdopted: adopted.length? totalAdoptedVolume/adopted.length : 0,
     pctBelowThreshold: total? active.length/total : 0,
     adoptedTiers: adoptedTiers, activeTiers: activeTiers, granularTiers: granularTiers,
+    csmPods: csmPods,
     opportunity: {
-      need50: need(0.5), need60: need(0.6), need70: need(0.7),
-      target50: target(0.5), target60: target(0.6), target70: target(0.7),
+      need50: need(0.5), need60: need(0.6), need65: need(0.65), need70: need(0.7),
+      target60: target(0.6), target65: target(0.65), target70: target(0.7),
       potentialVolumeOpportunity: potentialVolumeOpportunity
     },
     activeAnalysis: {
-      count: active.length, volume: totalActiveVolume,
-      pctOfDeals: total? active.length/total : 0,
+      count: activeOnlyCount, volume: totalActiveVolume,
+      pctOfDeals: total? activeOnlyCount/total : 0,
       pctOfVolume: (totalAdoptedVolume+totalActiveVolume)? totalActiveVolume/(totalAdoptedVolume+totalActiveVolume) : 0,
       buckets: activeBuckets, near:near, mid:mid, low:low
     },
-    reconciliation: buildReconciliation(adopted, active, total, adoptedTiers, activeTiers, granularTiers, totalAdoptedVolume, totalActiveVolume)
+    reconciliation: buildReconciliation(adopted, active, total, adoptedTiers, activeTiers, granularTiers, totalAdoptedVolume, totalActiveVolume, activeOnlyCount)
   };
 }
 function sumBy(arr,keyOrFn){ var fn = typeof keyOrFn==="function"?keyOrFn:function(r){return r[keyOrFn];}; return arr.reduce(function(a,r){return a+(fn(r)||0);},0); }
-
-function buildReconciliation(adopted,active,total,adoptedTiers,activeTiers,granularTiers,totalAdoptedVolume,totalActiveVolume){
+ 
+function buildReconciliation(adopted,active,total,adoptedTiers,activeTiers,granularTiers,totalAdoptedVolume,totalActiveVolume,activeOnlyCount){
   var checks = [];
   checks.push({name:"Adopted + Active = Total Terminal Deals", pass: (adopted.length+active.length)===total});
   checks.push({name:"Sum of Adopted tier counts = Total Adopted Deals", pass: sumBy(adoptedTiers,"count")===adopted.length});
-  checks.push({name:"Sum of Active tier counts = Total Active Deals", pass: sumBy(activeTiers,"count")===active.length});
+  checks.push({name:"Sum of Active tier counts = Total Active Deals", pass: sumBy(activeTiers,"count")===activeOnlyCount});
   checks.push({name:"Sum of Adopted tier volume = Total Adopted Volume", pass: centsEq(sumBy(adoptedTiers,"volume"), totalAdoptedVolume)});
   checks.push({name:"Sum of Active tier volume = Total Active Volume", pass: centsEq(sumBy(activeTiers,"volume"), totalActiveVolume)});
-  checks.push({name:"Granular adopted tier counts = Total Adopted Deals", pass: sumBy(granularTiers,"count")===adopted.length});
   return checks;
 }
 function centsEq(a,b){ return Math.round(a*100)===Math.round(b*100); }
-
+ 
 /* ============================== render: orchestration ============================== */
-
+ 
 var lastAgg = null;
-
+ 
 function refresh(){ renderAll(); }
-
+ 
 function renderAll(){
   var rows = getFilteredRows();
   var agg = aggregate(rows);
   lastAgg = agg;
-  renderReconciliation(agg);
   renderKpis(agg);
   renderNarrative(agg);
   renderCharts(agg);
+  renderCsmPodTable(agg);
   renderAdoptedSection(agg);
   renderActiveSection(agg);
   renderGranularSection(agg);
@@ -1125,108 +1591,382 @@ function renderAll(){
   var dot = document.getElementById("filterActiveDot"); dot.hidden = countActiveFilters()===0;
   document.getElementById("filterCount").textContent = rows.length.toLocaleString()+" of "+App.processed.length.toLocaleString()+" deals match current filters";
 }
-
-function renderReconciliation(agg){
-  var el = document.getElementById("reconciliationBanner");
-  var failed = agg.reconciliation.filter(function(c){return !c.pass;});
-  if (!failed.length){
-    el.innerHTML = '<div class="recon-banner recon-ok">&#10003; All reconciliation checks passed &mdash; tier totals match the executive summary.</div>';
-  } else {
-    el.innerHTML = '<div class="recon-banner recon-bad">&#9888; Reconciliation issue detected: '+failed.map(function(f){return esc(f.name);}).join("; ")+'</div>';
-  }
+ 
+var KPI_ICONS = {
+  stack:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12.5 11 15l4.5-5.5"/><circle cx="12" cy="12" r="9"/></svg>',
+  pulse:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2 7 4-14 2 7h4"/></svg>',
+  target:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>',
+  bill:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.4"/></svg>',
+  bolt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 14h6l-1 8 9-13h-6l1-7Z"/></svg>',
+  wallet:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h13A1.5 1.5 0 0 1 19 7.5V9h1.5A1.5 1.5 0 0 1 22 10.5v7A1.5 1.5 0 0 1 20.5 19h-16A1.5 1.5 0 0 1 3 17.5v-10Z"/><path d="M16 13.5h2"/></svg>',
+  bars:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>',
+  alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 16.5h.01"/><path d="M10.6 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.4 3.9a2 2 0 0 0-3.4 0Z"/></svg>'
+};
+var KPI_TREND = {
+  up:'<svg class="kpi-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16 10 10l4 4 6-8"/><path d="M14 6h6v6"/></svg>',
+  warn:'<svg class="kpi-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 16.5h.01"/><path d="M10.6 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.4 3.9a2 2 0 0 0-3.4 0Z"/></svg>'
+};
+function kpiCard(label,val,sub,cls,icon,primary){
+  var trend = cls==="accent" ? KPI_TREND.up : ((cls==="amber"||cls==="danger") ? KPI_TREND.warn : "");
+  return '<div class="kpi-card '+(cls||"")+(primary?' kpi-primary':'')+'">'
+    +'<div class="kpi-head"><div class="kpi-label">'+esc(label)+'</div><div class="kpi-icon">'+(KPI_ICONS[icon]||"")+'</div></div>'
+    +'<div class="kpi-body"><div class="kpi-val">'+val+'</div>'+(sub?'<div class="kpi-sub">'+trend+'<span>'+sub+'</span></div>':'')+'</div>'
+    +'</div>';
 }
-
-function kpiCard(label,val,sub,cls){ return '<div class="kpi-card '+(cls||"")+'"><div class="kpi-label">'+esc(label)+'</div><div class="kpi-val">'+val+'</div>'+(sub?'<div class="kpi-sub">'+sub+'</div>':'')+'</div>'; }
-
+ 
 function renderKpis(agg){
   var el = document.getElementById("kpiGrid");
   el.innerHTML =
-    kpiCard("Total Terminal Deals", fmtInt(agg.total), "In current filter", "") +
-    kpiCard("Adopted Deals", fmtInt(agg.adoptedCount), fmtPct(agg.adoptionRate)+" adoption rate", "accent") +
-    kpiCard("Active Deals", fmtInt(agg.activeCount), fmtPct(agg.pctBelowThreshold)+" below $5,000 threshold", "amber") +
-    kpiCard("Adoption Rate", fmtPct(agg.adoptionRate), "Adopted ÷ total deals", "accent") +
-    kpiCard("Total Adopted Volume", fmtMoney0(agg.totalAdoptedVolume), "Sum of adopted Adit Pay Volume", "accent") +
-    kpiCard("Active Volume", fmtMoney0(agg.totalActiveVolume), "Sum of active Adit Pay Volume", "amber") +
-    kpiCard("Total Adit Pay Volume", fmtMoney0(agg.totalVolume), "Across all qualifying deals", "") +
-    kpiCard("Avg. Volume per Adopted Deal", fmtMoney0(agg.avgAdopted), "Total adopted volume ÷ adopted deals", "");
+    kpiCard("Total Terminal Deals", fmtInt(agg.total), "In current filter", "", "stack", true) +
+    kpiCard("Adopted Deals", fmtInt(agg.adoptedCount), fmtPct(agg.adoptionRate)+" adoption rate", "accent", "check") +
+    kpiCard("Active Deals", fmtInt(agg.activeOnlyCount), fmtPct(agg.total? agg.activeOnlyCount/agg.total:0)+" below $5,000 threshold", "amber", "pulse") +
+    kpiCard("Failed Deals", fmtInt(agg.failCount), fmtPct(agg.total? agg.failCount/agg.total:0)+" below $5,000 threshold", "danger", "alert") +
+    kpiCard("Adoption Rate", fmtPct(agg.adoptionRate), "Adopted ÷ total deals", "accent", "target", true) +
+    kpiCard("Total Adopted Volume", fmtMoney0(agg.totalAdoptedVolume), "Sum of adopted Adit Pay Volume", "accent", "bill", true) +
+    kpiCard("Active Volume", fmtMoney0(agg.totalActiveVolume), "Sum of active Adit Pay Volume", "amber", "bolt") +
+    kpiCard("Total Adit Pay Volume", fmtMoney0(agg.totalVolume), "Across all qualifying deals", "", "wallet") +
+    kpiCard("Avg. Volume per Adopted Deal", fmtMoney0(agg.avgAdopted), "Total adopted volume ÷ adopted deals", "", "bars");
 }
-
+ 
 function renderNarrative(agg){
   var el = document.getElementById("narrativeStrip");
   if (!agg.total){ el.textContent = "No deals match the current filters."; return; }
   var near = agg.activeAnalysis.near;
   el.innerHTML =
     "<strong>"+fmtPct(agg.adoptionRate,1)+"</strong> of "+fmtInt(agg.total)+" terminal deals have adopted Adit Pay, processing <strong>"+fmtMoney0(agg.totalAdoptedVolume)+"</strong> in volume. "+
-    "<span class=\"n-amber\">"+fmtInt(agg.activeCount)+" deals</span> remain active below the $5,000 threshold"+
+    // agg.activeOnlyCount excludes Pay Score "Fail" deals, consistent with the
+    // Active Deals KPI card / Active Deals Summary table / funnel chart.
+    "<span class=\"n-amber\">"+fmtInt(agg.activeOnlyCount)+" deals</span> remain active below the $5,000 threshold"+
     (near ? ", including "+near+" within $1,000 of adopting" : "")+".";
 }
-
+ 
 /* ============================== charts ============================== */
-
+ 
 function destroyCharts(){ Object.keys(App.charts).forEach(function(k){ if(App.charts[k]) App.charts[k].destroy(); }); App.charts={}; }
-
+ 
 function themeColor(varName){ return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
-
+ 
+/* -- premium chart shading: metallic gradients + soft lift shadows. Purely visual;
+      does not touch any computed value, only how existing series are painted. -- */
+function shadeHex(hex, amt){
+  var m = hex.replace("#",""); var r=parseInt(m.substr(0,2),16), g=parseInt(m.substr(2,2),16), b=parseInt(m.substr(4,2),16);
+  function mix(c){ return amt>=0 ? Math.min(255, Math.round(c + (255-c)*amt)) : Math.max(0, Math.round(c*(1+amt))); }
+  return "rgb("+mix(r)+","+mix(g)+","+mix(b)+")";
+}
+function verticalMetalGradient(chart, hex){
+  var area = chart.chartArea;
+  if (!area) return hexToRgba(hex,.8);
+  var g = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+  g.addColorStop(0, shadeHex(hex,.5));
+  g.addColorStop(.42, shadeHex(hex,.08));
+  g.addColorStop(1, shadeHex(hex,-.22));
+  return g;
+}
+function horizontalMetalGradient(chart, hex){
+  var area = chart.chartArea;
+  if (!area) return hexToRgba(hex,.8);
+  var g = chart.ctx.createLinearGradient(area.left, 0, area.right, 0);
+  g.addColorStop(0, shadeHex(hex,-.15));
+  g.addColorStop(.5, shadeHex(hex,.42));
+  g.addColorStop(1, shadeHex(hex,.02));
+  return g;
+}
+function ringGeometry(chart, cutoutRatio){
+  var area = chart.chartArea;
+  if (!area) return null;
+  var cx = (area.left+area.right)/2, cy = (area.top+area.bottom)/2;
+  var outerR = Math.max(1, Math.min(area.width, area.height)/2);
+  var innerR = outerR * (cutoutRatio==null? .6 : cutoutRatio);
+  return {cx:cx, cy:cy, outerR:outerR, innerR:innerR};
+}
+function radialMetalGradient(chart, hex, cutoutRatio){
+  // Computed from chartArea (not the arc element) since the arc's own geometry
+  // is not yet populated the first time this scriptable color is resolved.
+  var geo = ringGeometry(chart, cutoutRatio);
+  if (!geo) return hexToRgba(hex,.85);
+  var g = chart.ctx.createRadialGradient(geo.cx, geo.cy, geo.innerR, geo.cx, geo.cy, geo.outerR);
+  g.addColorStop(0, shadeHex(hex,.4));
+  g.addColorStop(.55, shadeHex(hex,.05));
+  g.addColorStop(1, shadeHex(hex,-.2));
+  return g;
+}
+function liftShadowPlugin(pluginId, blur, dy, alpha){
+  return {
+    id: pluginId,
+    beforeDatasetsDraw: function(chart){ chart.ctx.save(); chart.ctx.shadowColor = "rgba(22,33,29,"+(alpha==null?.3:alpha)+")"; chart.ctx.shadowBlur = blur; chart.ctx.shadowOffsetY = dy; },
+    afterDatasetsDraw: function(chart){ chart.ctx.restore(); }
+  };
+}
+function ringGlossPlugin(cutoutRatio){
+  return {
+    id: "ringGloss",
+    afterDatasetsDraw: function(chart){
+      var geo = ringGeometry(chart, cutoutRatio);
+      if (!geo) return;
+      var ctx = chart.ctx;
+      ctx.save();
+      var g = ctx.createLinearGradient(geo.cx, geo.cy - geo.outerR, geo.cx, geo.cy);
+      g.addColorStop(0, "rgba(255,255,255,.55)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.globalCompositeOperation = "overlay";
+      ctx.beginPath();
+      ctx.arc(geo.cx, geo.cy, geo.outerR, -Math.PI*0.92, -Math.PI*0.08);
+      ctx.arc(geo.cx, geo.cy, geo.innerR, -Math.PI*0.08, -Math.PI*0.92, true);
+      ctx.closePath();
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.restore();
+    }
+  };
+}
+ 
 function renderCharts(agg){
   if (typeof Chart === "undefined") return;
   destroyCharts();
   var ink = themeColor("--ink"), grid = CHART_COLORS.grid;
   Chart.defaults.color = ink; Chart.defaults.font.family = "IBM Plex Sans, sans-serif"; Chart.defaults.font.size=11;
-
+  Chart.defaults.plugins.tooltip.backgroundColor = "rgba(22,33,29,.94)";
+  Chart.defaults.plugins.tooltip.titleFont = {family:"IBM Plex Sans, sans-serif", weight:"600", size:12};
+  Chart.defaults.plugins.tooltip.bodyFont = {family:"IBM Plex Mono, monospace", size:12};
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius = 8;
+  Chart.defaults.plugins.tooltip.displayColors = false;
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.legend.labels.pointStyle = "circle";
+ 
   mkBar("chartAdoptedTier", agg.adoptedTiers.map(function(t){return t.label;}), agg.adoptedTiers.map(function(t){return t.count;}), CHART_COLORS.adopted, "adopted", "count");
   mkBar("chartActiveTier", agg.activeTiers.map(function(t){return t.label;}), agg.activeTiers.map(function(t){return t.count;}), CHART_COLORS.active, "active", "count");
   mkBar("chartAdoptedVolume", agg.adoptedTiers.map(function(t){return t.label;}), agg.adoptedTiers.map(function(t){return t.volume;}), CHART_COLORS.adopted, "adoptedVol", "money");
-
+ 
+  // Adoption by CSM Pod: top 10 pods (by deal count) ranked top-to-bottom by
+  // adoption rate -- see the csmPods aggregation in aggregate(rows).
+  var podCtx = document.getElementById("chartCsmPod");
+  if (podCtx) {
+    App.charts.csmPod = new Chart(podCtx, {
+      type:"bar",
+      data:{ labels:agg.csmPods.map(function(p){ return p.label; }), datasets:[{ data:agg.csmPods.map(function(p){ return p.rate*100; }),
+        backgroundColor:function(c){ return horizontalMetalGradient(c.chart, CHART_COLORS.adopted); },
+        borderColor:CHART_COLORS.adopted, borderWidth:1.5, borderRadius:8, maxBarThickness:22 }]},
+      options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){
+          var p = agg.csmPods[c.dataIndex]; return fmtPct(p.rate)+" adopted ("+fmtInt(p.adopted)+" of "+fmtInt(p.total)+")";
+        } } } },
+        scales:{ x:{ grid:{color:grid}, border:{display:false}, ticks:{callback:function(v){ return v+"%"; }}, suggestedMax:100 },
+                 y:{ grid:{display:false}, border:{display:false} } },
+        onHover:function(evt, els, chart){ chart.canvas.style.cursor = els.length ? "pointer" : "default"; },
+        onClick:function(evt, els){
+          if (!els.length) return;
+          var p = agg.csmPods[els[0].index];
+          openDrilldown({ label:p.label, count:p.members.length, members:p.members });
+        } },
+      plugins:[liftShadowPlugin("barLift-csmPod", 8, 3, .2)]
+    });
+  }
+ 
+  // Rolling 12-month adoption trend: count of deals whose Pay Adopt Date falls
+  // in each of the trailing 12 calendar months (this month back through 11
+  // months ago), drawn from the currently filtered Adopted set (agg.adopted)
+  // so it stays consistent with every other chart/KPI on the page. The window
+  // is computed from "today" on every render instead of a hardcoded year, so
+  // it keeps rolling forward automatically.
+  // trendMonthRows keeps the actual deal rows per month (not just the count)
+  // so clicking a bar can open the same drilldown modal the tier charts use.
+  var trendToday = new Date();
+  var trendMonths = [];
+  for (var tmi = 11; tmi >= 0; tmi--) {
+    var tmDate = new Date(trendToday.getFullYear(), trendToday.getMonth() - tmi, 1);
+    trendMonths.push({
+      year: tmDate.getFullYear(), month: tmDate.getMonth(),
+      label: tmDate.toLocaleDateString("en-US", {month:"short"}) + " " + tmDate.getFullYear()
+    });
+  }
+  var trendMonthCounts = trendMonths.map(function(){ return 0; });
+  var trendMonthRows = trendMonths.map(function(){ return []; });
+  agg.adopted.forEach(function(r){
+    var d = r.payAdoptDate;
+    if (!d) return;
+    for (var tj=0; tj<trendMonths.length; tj++){
+      if (d.getFullYear()===trendMonths[tj].year && d.getMonth()===trendMonths[tj].month){
+        trendMonthCounts[tj]++; trendMonthRows[tj].push(r); break;
+      }
+    }
+  });
+  var mCtx = document.getElementById("chartAdoptedByMonth");
+  if (mCtx) {
+    App.charts.adoptedByMonth = new Chart(mCtx, {
+      type:"bar",
+      data:{ labels:trendMonths.map(function(m){ return m.label; }), datasets:[{ data:trendMonthCounts,
+        backgroundColor: function(c){ return verticalMetalGradient(c.chart, CHART_COLORS.adopted); },
+        borderColor:CHART_COLORS.adopted, borderWidth:1.5, borderRadius:8, maxBarThickness:34,
+        hoverBackgroundColor: function(c){ return verticalMetalGradient(c.chart, shadeHex(CHART_COLORS.adopted,.15)); } }]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){ return fmtInt(c.parsed.y||c.parsed.x)+" adopted"; } } } },
+        scales:{ x:{ grid:{display:false}, border:{display:false} },
+                 y:{ grid:{color:grid}, border:{display:false}, ticks:{precision:0} } },
+        onHover:function(evt, els, chart){ chart.canvas.style.cursor = els.length ? "pointer" : "default"; },
+        onClick:function(evt, els){
+          if (!els.length) return;
+          var i = els[0].index;
+          openDrilldown({ label:trendMonths[i].label, count:trendMonthRows[i].length, members:trendMonthRows[i] });
+        } },
+      plugins:[liftShadowPlugin("barLift-adoptedByMonth", 8, 3, .2)]
+    });
+  }
+ 
+  // Stage-wise breakdown: Active (excl. Fail), Failed, and Adopted deal counts
+  // per Stage. Computed here purely for this chart, from agg.active/agg.adopted
+  // -- doesn't touch agg.activeTiers, agg.activeCount, or any other section.
+  var stageMap = {};
+  function stageBucket(stageName){
+    var key = stageName || "(No Stage)";
+    if (!stageMap[key]) stageMap[key] = {active:0, failed:0, adopted:0, activeMembers:[], failedMembers:[], adoptedMembers:[]};
+    return stageMap[key];
+  }
+  agg.active.forEach(function(r){
+    var b = stageBucket(r.stage);
+    if (r.payScore==="Fail") { b.failed++; b.failedMembers.push(r); }
+    else { b.active++; b.activeMembers.push(r); }
+  });
+  agg.adopted.forEach(function(r){
+    var b = stageBucket(r.stage);
+    b.adopted++; b.adoptedMembers.push(r);
+  });
+  var stageNames = Object.keys(stageMap).sort(function(a,b){
+    var ta = stageMap[a].active+stageMap[a].failed+stageMap[a].adopted;
+    var tb = stageMap[b].active+stageMap[b].failed+stageMap[b].adopted;
+    return tb-ta;
+  });
+  var sCtx = document.getElementById("chartStageBreakdown");
+  if (sCtx) {
+    App.charts.stageBreakdown = new Chart(sCtx, {
+      type:"bar",
+      data:{ labels:stageNames, datasets:[
+        { label:"Active", data:stageNames.map(function(s){ return stageMap[s].active; }),
+          backgroundColor: function(c){ return verticalMetalGradient(c.chart, CHART_COLORS.active); },
+          borderColor:CHART_COLORS.active, borderWidth:1.5, borderRadius:6, maxBarThickness:26 },
+        { label:"Failed", data:stageNames.map(function(s){ return stageMap[s].failed; }),
+          backgroundColor: function(c){ return verticalMetalGradient(c.chart, CHART_COLORS.danger); },
+          borderColor:CHART_COLORS.danger, borderWidth:1.5, borderRadius:6, maxBarThickness:26 },
+        { label:"Adopted", data:stageNames.map(function(s){ return stageMap[s].adopted; }),
+          backgroundColor: function(c){ return verticalMetalGradient(c.chart, CHART_COLORS.adopted); },
+          borderColor:CHART_COLORS.adopted, borderWidth:1.5, borderRadius:6, maxBarThickness:26 }
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:true, position:"bottom", labels:{boxWidth:10,padding:12}},
+          tooltip:{ callbacks:{ label:function(c){ return c.dataset.label+": "+fmtInt(c.parsed.y||c.parsed.x); } } } },
+        scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:{maxRotation:60, minRotation:60, autoSkip:false, font:{size:9.5}} },
+                 y:{ grid:{color:grid}, border:{display:false}, ticks:{precision:0} } },
+        onHover:function(evt, els, chart){ chart.canvas.style.cursor = els.length ? "pointer" : "default"; },
+        onClick:function(evt, els){
+          if (!els.length) return;
+          var el = els[0];
+          var stageName = stageNames[el.index];
+          var seriesKeys = ["activeMembers","failedMembers","adoptedMembers"];
+          var seriesLabels = ["Active","Failed","Adopted"];
+          var members = stageMap[stageName][seriesKeys[el.datasetIndex]];
+          openDrilldown({ label: stageName+" — "+seriesLabels[el.datasetIndex], count: members.length, members: members });
+        } },
+      plugins:[liftShadowPlugin("barLift-stageBreakdown", 8, 3, .2)]
+    });
+  }
+ 
+  // Split the existing Active bucket (agg.active, which already includes
+  // both Pay Score "Active" and "Fail" deals -- see statusOf()) purely for
+  // this chart's display, without touching agg.activeCount or any other
+  // KPI/table that relies on the combined "Active Deals" figure elsewhere.
+  var failCount = agg.active.filter(function(r){ return r.payScore==="Fail"; }).length;
+  var activeOnlyCount = agg.activeCount - failCount;
+ 
+  var funnelBaseColors = ["#9a988f", CHART_COLORS.active, CHART_COLORS.danger, CHART_COLORS.adopted];
   var fCtx = document.getElementById("chartFunnel");
   App.charts.funnel = new Chart(fCtx, {
     type:"bar",
-    data:{ labels:["Total Terminal Deals","Active Deals","Adopted Deals"],
-      datasets:[{ data:[agg.total, agg.activeCount, agg.adoptedCount],
-        backgroundColor:[CHART_COLORS.grid.replace(".18",".5"), CHART_COLORS.activeSoft, CHART_COLORS.adoptedSoft],
-        borderColor:["#9a988f", CHART_COLORS.active, CHART_COLORS.adopted], borderWidth:1.5, borderRadius:5 }]},
+    data:{ labels:["Total Terminal Deals","Active Deals","Failed Deals","Adopted Deals"],
+      datasets:[{ data:[agg.total, activeOnlyCount, failCount, agg.adoptedCount],
+        backgroundColor:function(c){ return horizontalMetalGradient(c.chart, funnelBaseColors[c.dataIndex]); },
+        borderColor:funnelBaseColors, borderWidth:1.5, borderRadius:8 }]},
     options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ x:{grid:{color:grid}, ticks:{precision:0}}, y:{grid:{display:false}} } }
+      scales:{ x:{grid:{color:grid}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{display:false}} } },
+    plugins:[liftShadowPlugin("funnelLift", 10, 4, .22)]
   });
-
+ 
   var rCtx = document.getElementById("chartRate");
+  var rateBaseColors = [CHART_COLORS.adopted, "#9a988f"];
   App.charts.rate = new Chart(rCtx, {
     type:"doughnut",
     data:{ labels:["Adopted","Remaining"], datasets:[{ data:[agg.adoptedCount, Math.max(0,agg.total-agg.adoptedCount)],
-      backgroundColor:[CHART_COLORS.adopted, grid.replace(".18",".35")], borderWidth:0 }]},
-    options:{ responsive:true, maintainAspectRatio:false, cutout:"72%", plugins:{legend:{position:"bottom", labels:{boxWidth:10,padding:12}}} },
-    plugins:[{
-      id:"centerRate",
-      afterDraw:function(chart){
-        var ctx = chart.ctx; var w=chart.width, h=chart.height;
-        ctx.save(); ctx.textAlign="center"; ctx.textBaseline="middle";
-        ctx.font="600 20px IBM Plex Mono, monospace"; ctx.fillStyle=ink;
-        ctx.fillText(fmtPct(agg.adoptionRate), w/2, h/2-6);
-        ctx.font="500 10px IBM Plex Sans, sans-serif"; ctx.fillStyle=themeColor("--ink-soft");
-        ctx.fillText("adopted", w/2, h/2+14);
-        ctx.restore();
+      backgroundColor:function(c){ return radialMetalGradient(c.chart, rateBaseColors[c.dataIndex], .6); },
+      borderWidth:0, borderRadius:10, spacing:3 }]},
+    options:{ responsive:true, maintainAspectRatio:false, cutout:"60%", plugins:{legend:{position:"bottom", labels:{boxWidth:10,padding:12}}} },
+    plugins:[
+      liftShadowPlugin("ringLift", 14, 6, .26),
+      ringGlossPlugin(.6),
+      {
+        id:"centerRate",
+        afterDraw:function(chart){
+          var ctx = chart.ctx; var w=chart.width, h=chart.height;
+          ctx.save(); ctx.textAlign="center"; ctx.textBaseline="middle";
+          ctx.font="600 20px IBM Plex Mono, monospace"; ctx.fillStyle=ink;
+          ctx.fillText(fmtPct(agg.adoptionRate), w/2, h/2-6);
+          ctx.font="500 10px IBM Plex Sans, sans-serif"; ctx.fillStyle=themeColor("--ink-soft");
+          ctx.fillText("adopted", w/2, h/2+14);
+          ctx.restore();
+        }
+      },
+      {
+        // Draws a tick mark (and label) on the ring at the 65% position --
+        // the same adoption target used throughout the Opportunity section
+        // (agg.opportunity.target65 / need65) -- so this ring shows at a
+        // glance how far the current rate sits from that target.
+        id:"targetTick65",
+        afterDraw:function(chart){
+          var geo = ringGeometry(chart, .6);
+          if (!geo) return;
+          var target = 0.65;
+          var angle = -Math.PI/2 + target*2*Math.PI;
+          var cos = Math.cos(angle), sin = Math.sin(angle);
+          var x1 = geo.cx + cos*(geo.innerR-4), y1 = geo.cy + sin*(geo.innerR-4);
+          var x2 = geo.cx + cos*(geo.outerR+4), y2 = geo.cy + sin*(geo.outerR+4);
+          var ctx = chart.ctx;
+          ctx.save();
+          ctx.strokeStyle = ink; ctx.lineWidth = 2.5; ctx.lineCap = "round";
+          ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+          var lx = geo.cx + cos*(geo.outerR+14), ly = geo.cy + sin*(geo.outerR+14);
+          ctx.font = "600 9.5px IBM Plex Mono, monospace";
+          ctx.fillStyle = themeColor("--ink-soft");
+          ctx.textAlign = cos > 0.15 ? "left" : (cos < -0.15 ? "right" : "center");
+          ctx.textBaseline = "middle";
+          ctx.fillText("65% target", lx, ly);
+          ctx.restore();
+        }
       }
-    }]
+    ]
   });
-
+ 
   function mkBar(canvasId, labels, data, color, key, fmt){
     var ctx = document.getElementById(canvasId);
     App.charts[key] = new Chart(ctx, {
       type:"bar",
-      data:{ labels:labels, datasets:[{ data:data, backgroundColor: hexToRgba(color,.6), borderColor:color, borderWidth:1.5, borderRadius:4, maxBarThickness:34 }]},
+      data:{ labels:labels, datasets:[{ data:data,
+        backgroundColor: function(c){ return verticalMetalGradient(c.chart, color); },
+        borderColor:color, borderWidth:1.5, borderRadius:8, maxBarThickness:34,
+        hoverBackgroundColor: function(c){ return verticalMetalGradient(c.chart, shadeHex(color,.15)); } }]},
       options:{ responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){ return fmt==="money"? fmtMoney0(c.parsed.y||c.parsed.x) : fmtInt(c.parsed.y||c.parsed.x); } } } },
-        scales:{ x:{ grid:{display:false}, ticks:{maxRotation:60, minRotation:60, autoSkip:false, font:{size:9.5}} },
-                 y:{ grid:{color:grid}, ticks:{ callback:function(v){ return fmt==="money"? "$"+abbrev(v) : v; } } } },
+        scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:{maxRotation:60, minRotation:60, autoSkip:false, font:{size:9.5}} },
+                 y:{ grid:{color:grid}, border:{display:false}, ticks:{ callback:function(v){ return fmt==="money"? "$"+abbrev(v) : v; } } } },
         onClick:function(evt, els){ if(!els.length) return; var i=els[0].index; var tierArr = key==="active"?agg.activeTiers:agg.adoptedTiers; openDrilldown(tierArr[i]); }
-      }
+      },
+      plugins:[liftShadowPlugin("barLift-"+key, 8, 3, .2)]
     });
   }
 }
 function abbrev(n){ if (Math.abs(n)>=1e6) return (n/1e6).toFixed(1)+"M"; if (Math.abs(n)>=1e3) return (n/1e3).toFixed(0)+"K"; return String(n); }
 function hexToRgba(hex,a){ var m = hex.replace("#",""); var r=parseInt(m.substr(0,2),16),g=parseInt(m.substr(2,2),16),b=parseInt(m.substr(4,2),16); return "rgba("+r+","+g+","+b+","+a+")"; }
-
+ 
 /* ============================== tier table sections ============================== */
-
+ 
 function tierTableHTML(title, subtitle, tiers, totalCount, totalVolume, opts){
   opts = opts||{};
   var rows = tiers.map(function(t,i){
@@ -1238,6 +1978,10 @@ function tierTableHTML(title, subtitle, tiers, totalCount, totalVolume, opts){
       "<td>"+fmtMoney0(t.volume)+"</td>"+
       "</tr>";
   }).join("");
+  // Sum of each row's own "% of X" rather than a hardcoded 100% -- correct
+  // both when the tiers fully partition totalCount (sums to 100%, as before)
+  // and when they cover only a subset of it (e.g. the granular $10k-$30k table).
+  var footerPct = tiers.reduce(function(a,t){ return a + t.pct; }, 0);
   return '<p class="section-eyebrow">Executive summary</p>'+
     "<h2>"+esc(title)+"</h2>"+
     '<p class="panel-sub">'+subtitle+"</p>"+
@@ -1245,12 +1989,12 @@ function tierTableHTML(title, subtitle, tiers, totalCount, totalVolume, opts){
     "<th>Volume Range</th><th>Deal Count</th><th>% of "+esc(opts.pctLabel)+"</th>"+
     (opts.showCumulative? "<th>Cumulative Count</th>":"")+
     "<th>Total Tier Volume</th></tr></thead><tbody>"+rows+"</tbody>"+
-    "<tfoot><tr><td>Total</td><td>"+fmtInt(totalCount)+"</td><td>100%</td>"+
+    "<tfoot><tr><td>Total</td><td>"+fmtInt(totalCount)+"</td><td>"+fmtPct(footerPct)+"</td>"+
     (opts.showCumulative? "<td>"+fmtInt(totalCount)+"</td>":"")+
     "<td>"+fmtMoney0(totalVolume)+"</td></tr></tfoot></table></div>"+
     '<p style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;">Click any volume range to view the underlying deals.</p>';
 }
-
+ 
 function renderAdoptedSection(agg){
   var el = document.getElementById("adoptedSummarySection");
   el.innerHTML = tierTableHTML("1. Adopted Deals Summary", "Adopted Deals &nbsp;|&nbsp; ≥ $5,000 Volume", agg.adoptedTiers, agg.adoptedCount, agg.totalAdoptedVolume, {kind:"adopted", pctLabel:"Adopted", showCumulative:true});
@@ -1260,19 +2004,47 @@ function renderAdoptedSection(agg){
 }
 function renderActiveSection(agg){
   var el = document.getElementById("activeSummarySection");
-  el.innerHTML = tierTableHTML("2. Active Deals Summary", "Active Deals &nbsp;|&nbsp; &lt; $5,000 Volume", agg.activeTiers, agg.activeCount, agg.totalActiveVolume, {kind:"active", pctLabel:"Active", showCumulative:true});
+  el.innerHTML = tierTableHTML("2. Active Deals Summary", "Active Deals &nbsp;|&nbsp; &lt; $5,000 Volume", agg.activeTiers, agg.activeOnlyCount, agg.totalActiveVolume, {kind:"active", pctLabel:"Active", showCumulative:true});
   el.querySelectorAll("td.clickable").forEach(function(td){
     td.addEventListener("click", function(){ openDrilldown(agg.activeTiers[Number(td.getAttribute("data-tier-idx"))]); });
   });
 }
 function renderGranularSection(agg){
   var el = document.getElementById("granularSection");
-  el.innerHTML = tierTableHTML("3. Adopted Deals — Granular $2,500 Steps", "Detailed visibility into adoption between $5,000 and $30,000", agg.granularTiers, agg.adoptedCount, agg.totalAdoptedVolume, {kind:"granular", pctLabel:"Adopted", showCumulative:false});
+  // Totals reflect only the rows this table actually shows ($10,000-$30,000) --
+  // see table 1 for the $5,000-$10,000 slice, already shown there.
+  var granularShownCount = sumBy(agg.granularTiers, "count");
+  var granularShownVolume = sumBy(agg.granularTiers, "volume");
+  el.innerHTML = tierTableHTML("3. Adopted Deals — Granular $2,500 Steps", "Detailed visibility into adoption between $10,000 and $30,000 (see table 1 above for $5,000–$10,000)", agg.granularTiers, granularShownCount, granularShownVolume, {kind:"granular", pctLabel:"Adopted", showCumulative:false});
   el.querySelectorAll("td.clickable").forEach(function(td){
     td.addEventListener("click", function(){ openDrilldown(agg.granularTiers[Number(td.getAttribute("data-tier-idx"))]); });
   });
 }
-
+ 
+function renderCsmPodTable(agg){
+  var el = document.getElementById("csmPodTableWrap");
+  if (!el) return;
+  var rows = agg.csmPods.map(function(p,i){
+    return "<tr>"+
+      '<td class="clickable" data-pod-idx="'+i+'">'+esc(p.label)+"</td>"+
+      "<td>"+fmtInt(p.total)+"</td>"+
+      "<td>"+fmtInt(p.adopted)+"</td>"+
+      "<td>"+fmtPct(p.rate)+"</td>"+
+      "<td>"+fmtMoney0(p.volume)+"</td>"+
+      "</tr>";
+  }).join("");
+  el.innerHTML = '<div class="table-scroll"><table class="tier-table"><thead><tr>'+
+    "<th>CSM Pod</th><th>Total Deals</th><th>Adopted Deals</th><th>Adoption Rate</th><th>Adopted Volume</th>"+
+    "</tr></thead><tbody>"+(rows || '<tr><td colspan="5" class="empty-note">No pod data in current filter.</td></tr>')+"</tbody></table></div>"+
+    '<p style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;">Click a pod to view its deals.</p>';
+  el.querySelectorAll("td.clickable").forEach(function(td){
+    td.addEventListener("click", function(){
+      var p = agg.csmPods[Number(td.getAttribute("data-pod-idx"))];
+      openDrilldown({ label:p.label, count:p.members.length, members:p.members });
+    });
+  });
+}
+ 
 function renderActiveAnalysis(agg){
   var a = agg.activeAnalysis;
   var el = document.getElementById("activeAnalysisSection");
@@ -1297,37 +2069,49 @@ function renderActiveAnalysis(agg){
 }
 function statTile(val,label){ return '<div class="stat-tile"><div class="st-val">'+val+'</div><div class="st-lbl">'+esc(label)+'</div></div>'; }
 function oppCard(val,label){ return '<div class="opp-card"><div class="opp-num">'+val+'</div><div class="opp-lbl">'+esc(label)+'</div></div>'; }
-
+ 
 function renderOpportunity(agg){
   var o = agg.opportunity;
   var el = document.getElementById("opportunitySection");
   el.innerHTML =
     '<p class="section-eyebrow">Adoption opportunity</p><h2>Path to higher adoption</h2>'+
     '<div class="opp-row">'+
-    oppCard(fmtInt(o.need50),"Deals needed for 50% adoption")+
     oppCard(fmtInt(o.need60),"Deals needed for 60% adoption")+
+    oppCard(fmtInt(o.need65),"Deals needed for 65% adoption")+
     oppCard(fmtInt(o.need70),"Deals needed for 70% adoption")+
     "</div>"+
     '<div class="stat-grid" style="margin-top:14px;">'+
     statTile(fmtMoney0(o.potentialVolumeOpportunity),"Potential volume opportunity")+
-    statTile(fmtInt(o.target50),"Target adopted deals @ 50%")+
     statTile(fmtInt(o.target60),"Target adopted deals @ 60%")+
+    statTile(fmtInt(o.target65),"Target adopted deals @ 65%")+
     statTile(fmtInt(o.target70),"Target adopted deals @ 70%")+
     "</div>"+
     '<p style="font-size:12px;color:var(--ink-soft);margin-top:12px;">Potential volume opportunity is the additional Adit Pay Volume every active deal would need to process to individually cross the $5,000 adoption threshold.</p>';
 }
-
+ 
 /* ============================== drilldown ============================== */
-
+ 
 function openDrilldown(tier){
   var modal = document.getElementById("drilldownModal");
-  document.getElementById("drilldownTitle").textContent = tier.label + " — " + tier.count + " deal" + (tier.count===1?"":"s");
-  document.getElementById("drilldownBody").innerHTML = dealTableHTML(tier.members);
+  var members = tier.members;
+  var count = tier.count;
+  // The Active "$0" tier mixes Pay Score "Active" and "Fail" deals (see
+  // statusOf()). When opening its list, show only true "Active" pay-score
+  // deals so this drilldown isn't mixed with Fail deals. This only affects
+  // what's shown in this modal -- it does not touch agg.activeTiers, the
+  // Active Deals Summary table/totals, or any other section built from the
+  // combined active figure.
+  if (tier.label === "$0") {
+    members = members.filter(function(r){ return r.payScore !== "Fail"; });
+    count = members.length;
+  }
+  document.getElementById("drilldownTitle").textContent = tier.label + " — " + count + " deal" + (count===1?"":"s");
+  document.getElementById("drilldownBody").innerHTML = dealTableHTML(members);
   modal.hidden = false;
 }
 document.getElementById("drilldownClose").addEventListener("click", function(){ document.getElementById("drilldownModal").hidden = true; });
 document.getElementById("drilldownModal").addEventListener("click", function(e){ if (e.target.id==="drilldownModal") e.currentTarget.hidden = true; });
-
+ 
 function dealTableHTML(rows){
   if (!rows.length) return '<p class="empty-note">No deals in this range.</p>';
   var head = ["Deal Name","Record Number","Terminal Count","Package","Stage","Pay Status","Pay Score","Adit Pay Volume","Pay Adopt Date","CSM","CSM Pod","Tech OB"];
@@ -1342,20 +2126,20 @@ function dealTableHTML(rows){
   return '<div class="table-scroll"><table><thead><tr>'+head.map(function(h){return "<th>"+h+"</th>";}).join("")+
     "</tr></thead><tbody>"+body+"</tbody></table></div>";
 }
-
+ 
 /* ============================== explorer ============================== */
-
+ 
 var explorerSearchEl = document.getElementById("explorerSearch");
 explorerSearchEl.addEventListener("input", debounce(function(){ App.explorer.search = explorerSearchEl.value.trim().toLowerCase(); App.explorer.page=1; renderExplorer(); },200));
 document.getElementById("explorerClearTier").addEventListener("click", function(){ App.explorer.tierFilter=null; document.getElementById("explorerClearTier").hidden=true; renderExplorer(); });
-
+ 
 var EXPLORER_COLS = [
   {key:"dealName", label:"Deal Name"}, {key:"recordNumber", label:"Record #"}, {key:"terminalCount", label:"Terminals"},
   {key:"package", label:"Package"}, {key:"stage", label:"Stage"}, {key:"payStatus", label:"Pay Status"},
   {key:"payScore", label:"Pay Score"}, {key:"aditPayVolume", label:"Adit Pay Volume", money:true},
   {key:"payAdoptDate", label:"Pay Adopt Date", date:true}, {key:"csm", label:"CSM"}, {key:"csmPod", label:"CSM Pod"}, {key:"techOb", label:"Tech OB"}
 ];
-
+ 
 function renderExplorer(){
   var head = document.querySelector("#explorerTable thead tr");
   head.innerHTML = EXPLORER_COLS.map(function(c){
@@ -1371,7 +2155,7 @@ function renderExplorer(){
       renderExplorer();
     });
   });
-
+ 
   var rows = getFilteredRows();
   if (App.explorer.tierFilter) rows = rows.filter(function(r){ return App.explorer.tierFilter.indexOf(r)!==-1; });
   var q = App.explorer.search;
@@ -1388,15 +2172,15 @@ function renderExplorer(){
     else { av = av==null? -Infinity: av; bv = bv==null? -Infinity: bv; }
     if (av<bv) return -1*dir; if (av>bv) return 1*dir; return 0;
   });
-
+ 
   document.getElementById("explorerCount").textContent = rows.length.toLocaleString()+" deals";
-
+ 
   var pageSize = App.explorer.pageSize;
   var pageCount = Math.max(1, Math.ceil(rows.length/pageSize));
   if (App.explorer.page>pageCount) App.explorer.page=pageCount;
   var start = (App.explorer.page-1)*pageSize;
   var pageRows = rows.slice(start, start+pageSize);
-
+ 
   var tbody = document.querySelector("#explorerTable tbody");
   if (!pageRows.length){ tbody.innerHTML = '<tr><td colspan="'+EXPLORER_COLS.length+'" class="empty-note">No deals match the current filters.</td></tr>'; }
   else {
@@ -1409,7 +2193,7 @@ function renderExplorer(){
       }).join("")+"</tr>";
     }).join("");
   }
-
+ 
   var pager = document.getElementById("explorerPager");
   pager.innerHTML = 'Page '+App.explorer.page+" of "+pageCount+
     ' &nbsp; <button class="btn btn-sm" id="pgPrev" '+(App.explorer.page<=1?"disabled":"")+'>Prev</button>'+
@@ -1417,10 +2201,10 @@ function renderExplorer(){
   var prevBtn = document.getElementById("pgPrev"), nextBtn = document.getElementById("pgNext");
   if (prevBtn) prevBtn.addEventListener("click", function(){ App.explorer.page--; renderExplorer(); });
   if (nextBtn) nextBtn.addEventListener("click", function(){ App.explorer.page++; renderExplorer(); });
-
+ 
   document.getElementById("explorerClearTier").hidden = !App.explorer.tierFilter;
 }
-
+ 
 function jumpExplorerToTier(tier){
   App.explorer.tierFilter = tier.members;
   App.explorer.page = 1;
@@ -1428,9 +2212,9 @@ function jumpExplorerToTier(tier){
   renderExplorer();
   document.getElementById("explorerSection").scrollIntoView({behavior:"smooth", block:"start"});
 }
-
+ 
 /* ============================== validation detail ============================== */
-
+ 
 function renderValidationDetail(){
   var el = document.getElementById("validationDetailSection");
   var v = App.validation;
@@ -1450,9 +2234,9 @@ function renderValidationDetail(){
     (rows ? '<div class="issues-table-wrap" style="margin-top:14px;max-height:320px;"><table><thead><tr><th>Row</th><th>Deal</th><th>Type</th><th>Reason</th></tr></thead><tbody>'+rows+"</tbody></table></div>"
       : '<p style="font-size:13px;color:var(--ink-soft);margin-top:10px;">No data quality issues found.</p>');
 }
-
+ 
 /* ============================== export ============================== */
-
+ 
 document.getElementById("btnExportToggle").addEventListener("click", function(){
   document.getElementById("exportPanel").hidden = !document.getElementById("exportPanel").hidden;
 });
@@ -1467,7 +2251,7 @@ document.getElementById("exportPanel").addEventListener("click", function(e){
   else if (kind==="csv") exportCsv();
   else if (kind==="pdf") exportPdf();
 });
-
+ 
 function tierSheetAoA(title, subtitle, tiers, totalCount, totalVolume, showCum, pctLabel){
   var aoa = [[title],[subtitle],[]];
   var head = ["Volume Range","Deal Count","% of "+pctLabel];
@@ -1486,7 +2270,7 @@ function tierSheetAoA(title, subtitle, tiers, totalCount, totalVolume, showCum, 
   aoa.push(totalRow);
   return aoa;
 }
-
+ 
 async function offerDownload(filename, blobOrData){
   try{
     if (!App.downloadsNs) App.downloadsNs = await (window.claude ? window.claude.use("downloads") : Promise.resolve(null));
@@ -1509,12 +2293,12 @@ async function offerDownload(filename, blobOrData){
     return true;
   } catch(e2){ alert("Download isn't available in this preview."); return false; }
 }
-
+ 
 function exportExcel(){
   if (typeof XLSX === "undefined"){ alert("Excel export library did not load."); return; }
   var agg = lastAgg || aggregate(getFilteredRows());
   var wb = XLSX.utils.book_new();
-
+ 
   var execAoA = [
     ["Adit Pay Terminal Adoption Analyzer — Executive Summary"],
     ["Generated "+new Date().toLocaleString()],
@@ -1534,22 +2318,22 @@ function exportExcel(){
   ];
   agg.reconciliation.forEach(function(c){ execAoA.push([c.name, c.pass?"PASS":"FAIL"]); });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(execAoA), "Executive Summary");
-
+ 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
     tierSheetAoA("1. Adopted Deals Summary","Adopted Deals | >= $5,000 Volume", agg.adoptedTiers, agg.adoptedCount, agg.totalAdoptedVolume, true, "Adopted")
   ), "Adopted Summary");
-
+ 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
-    tierSheetAoA("2. Active Deals Summary","Active Deals | < $5,000 Volume", agg.activeTiers, agg.activeCount, agg.totalActiveVolume, true, "Active")
+    tierSheetAoA("2. Active Deals Summary","Active Deals | < $5,000 Volume", agg.activeTiers, agg.activeOnlyCount, agg.totalActiveVolume, true, "Active")
   ), "Active Summary");
-
+ 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(
-    tierSheetAoA("3. Adopted Deals - Granular $2,500 Steps","", agg.granularTiers, agg.adoptedCount, agg.totalAdoptedVolume, false, "Adopted")
+    tierSheetAoA("3. Adopted Deals - Granular $2,500 Steps","", agg.granularTiers, sumBy(agg.granularTiers,"count"), sumBy(agg.granularTiers,"volume"), false, "Adopted")
   ), "Granular Adoption");
-
+ 
   var dealHead = ["Deal Name","Record Number","Terminal Count","Package","Stage","Pay Status","Pay Score","Adit Pay Volume","Adoption Status","Volume Tier","Pay Adopt Date","Agreement Signed Date","CSM","CSM Pod","Tech OB","Potential Additional Volume"];
   var dealRows = getFilteredRows().map(function(r){
-    var status = r.aditPayVolume>=ADOPT_THRESHOLD?"Adopted":"Active";
+    var status = statusOf(r);
     var tier = findTier(r.aditPayVolume, status==="Adopted"?ADOPTED_TIERS:ACTIVE_TIERS).label;
     return [r.dealName, r.recordNumber, r.terminalCount, r.package, r.stage, r.payStatus, r.payScore,
       Number(r.aditPayVolume.toFixed(2)), status, tier,
@@ -1557,7 +2341,7 @@ function exportExcel(){
       r.csm, r.csmPod, r.techOb, status==="Active"? Number((ADOPT_THRESHOLD-r.aditPayVolume).toFixed(2)) : 0];
   });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([dealHead].concat(dealRows)), "Deal-Level Data");
-
+ 
   var v = App.validation;
   var qaAoA = [["Data Validation / Quality"],[],
     ["Total rows uploaded", v.totalRows],["Valid records", v.validRecords],
@@ -1565,17 +2349,17 @@ function exportExcel(){
     ["Row","Deal","Type","Reason"]];
   v.issues.forEach(function(is){ qaAoA.push([is.rowNum, is.detail, is.severity, is.reason]); });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(qaAoA), "Validation");
-
+ 
   var wbout = XLSX.write(wb, {bookType:"xlsx", type:"array"});
   var blob = new Blob([wbout], {type:"application/octet-stream"});
   offerDownload("Adit_Pay_Adoption_Summary.xlsx", blob);
 }
-
+ 
 function exportCsv(){
   var head = ["Deal Name","Record Number","Terminal Count","Package","Stage","Pay Status","Pay Score","Adit Pay Volume","Adoption Status","Volume Tier","Pay Adopt Date","Agreement Signed Date","CSM","CSM Pod","Tech OB","Potential Additional Volume"];
   var lines = [head.join(",")];
   getFilteredRows().forEach(function(r){
-    var status = r.aditPayVolume>=ADOPT_THRESHOLD?"Adopted":"Active";
+    var status = statusOf(r);
     var tier = findTier(r.aditPayVolume, status==="Adopted"?ADOPTED_TIERS:ACTIVE_TIERS).label;
     var vals = [r.dealName, r.recordNumber, r.terminalCount, r.package, r.stage, r.payStatus, r.payScore,
       r.aditPayVolume.toFixed(2), status, tier,
@@ -1587,7 +2371,7 @@ function exportCsv(){
   offerDownload("Adit_Pay_Deal_Data.csv", blob);
 }
 function csvCell(v){ v = v==null?"":String(v); if (/[",\n]/.test(v)) v = '"'+v.replace(/"/g,'""')+'"'; return v; }
-
+ 
 function exportPdf(){
   if (typeof window.jspdf === "undefined"){ alert("PDF export library did not load."); return; }
   var agg = lastAgg || aggregate(getFilteredRows());
@@ -1598,7 +2382,7 @@ function exportPdf(){
   doc.text("Adit Pay Terminal Adoption Analyzer", 40, y); y+=18;
   doc.setFont("helvetica","normal"); doc.setFontSize(10);
   doc.text("Executive Summary — generated "+new Date().toLocaleString(), 40, y); y+=20;
-
+ 
   var kpiRows = [
     ["Total Terminal Deals", fmtInt(agg.total)],["Adopted Deals", fmtInt(agg.adoptedCount)],
     ["Active Deals", fmtInt(agg.activeCount)],["Adoption Rate", fmtPct(agg.adoptionRate,2)],
@@ -1620,8 +2404,8 @@ function exportPdf(){
     doc.addPage(); y = 40;
     doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.text("Adoption Opportunity", 40, y); y+=16;
     doc.autoTable({ startY:y, head:[["Metric","Value"]], body:[
-      ["Deals needed for 50% adoption", fmtInt(agg.opportunity.need50)],
       ["Deals needed for 60% adoption", fmtInt(agg.opportunity.need60)],
+      ["Deals needed for 65% adoption", fmtInt(agg.opportunity.need65)],
       ["Deals needed for 70% adoption", fmtInt(agg.opportunity.need70)],
       ["Potential volume opportunity", fmtMoney0(agg.opportunity.potentialVolumeOpportunity)]
     ], styles:{fontSize:9} });
@@ -1631,11 +2415,12 @@ function exportPdf(){
   var blob = doc.output("blob");
   offerDownload("Adit_Pay_Executive_Summary.pdf", blob);
 }
-
+ 
 /* ============================== wire drilldown -> explorer jump ============================== */
 document.getElementById("drilldownBody").addEventListener("dblclick", function(){});
-
+ 
 })();
 </script>
+ 
 </body>
 </html>
