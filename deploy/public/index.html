@@ -559,7 +559,7 @@
         <h2 style="margin-bottom:14px;">Adoption by CSM Pod</h2>
         <p class="panel-sub">Top 10 CSM Pods by deal count in the current filter, ranked top to bottom by adoption rate.</p>
         <div class="charts-grid" style="grid-template-columns:1fr;">
-          <div class="chart-card"><h3>Adoption rate by pod</h3><p class="chart-sub">Adopted &divide; total deals, per pod</p><div class="chart-wrap"><canvas id="chartCsmPod"></canvas></div></div>
+          <div class="chart-card"><div class="chart-wrap" id="csmPodChartWrap"><canvas id="chartCsmPod"></canvas></div></div>
         </div>
         <div id="csmPodTableWrap" style="margin-top:16px;"></div>
       </section>
@@ -716,7 +716,8 @@ function findTier(volume, tiers){
 var CHART_COLORS = {
   adopted: "#2F6F5E", adoptedSoft:"rgba(47,111,94,.28)",
   active: "#B8702F", activeSoft:"rgba(184,112,47,.28)",
-  danger: "#AE3B3B", grid:"rgba(120,120,110,.18)"
+  danger: "#AE3B3B", grid:"rgba(120,120,110,.18)",
+  podAccent: "#1F5245", podMuted: "#9BA399"
 };
  
 /* ============================== formatters ============================== */
@@ -1521,6 +1522,9 @@ function aggregate(rows){
   var csmPods = Object.keys(podMap).map(function(key){
     var p = podMap[key];
     var label = Object.keys(p.labels).sort(function(a,b){ return p.labels[b]-p.labels[a]; })[0];
+    // Normalize the trailing "pod"/"Pod" word to "POD" so every label reads
+    // consistently regardless of how it was cased in the source data.
+    label = label.replace(/\bpod\b/gi, "POD");
     return { label:label, total:p.total, adopted:p.adopted, rate: p.total? p.adopted/p.total : 0, volume:p.volume, members:p.members };
   });
   // Top 10 pods by deal count, then ranked top-to-bottom by adoption rate --
@@ -1740,19 +1744,27 @@ function renderCharts(agg){
   mkBar("chartAdoptedVolume", agg.adoptedTiers.map(function(t){return t.label;}), agg.adoptedTiers.map(function(t){return t.volume;}), CHART_COLORS.adopted, "adoptedVol", "money");
  
   // Adoption by CSM Pod: top 10 pods (by deal count) ranked top-to-bottom by
-  // adoption rate -- see the csmPods aggregation in aggregate(rows).
+  // adoption rate -- see the csmPods aggregation in aggregate(rows). Flat
+  // fill (no gradient/border), rounded end only, the top 3 pods picked out
+  // in the rich brand emerald and the rest in a muted gray-green -- rank is
+  // also visible from sort order, so color is never the only signal. Every
+  // bar is directly labeled with its own rate + fraction, so the axis,
+  // gridlines, and ticks are dropped entirely rather than left as unread
+  // chrome.
   var podCtx = document.getElementById("chartCsmPod");
   if (podCtx) {
     App.charts.csmPod = new Chart(podCtx, {
       type:"bar",
-      data:{ labels:agg.csmPods.map(function(p){ return p.label; }), datasets:[{ data:agg.csmPods.map(function(p){ return p.rate*100; }),
-        backgroundColor:function(c){ return horizontalMetalGradient(c.chart, CHART_COLORS.adopted); },
-        borderColor:CHART_COLORS.adopted, borderWidth:1.5, borderRadius:8, maxBarThickness:22 }]},
+      data:{ labels:agg.csmPods.map(function(p){ return p.label; }), datasets:[{
+        data:agg.csmPods.map(function(p){ return p.rate*100; }),
+        backgroundColor:agg.csmPods.map(function(p,i){ return i<3 ? CHART_COLORS.podAccent : CHART_COLORS.podMuted; }),
+        borderWidth:0, borderRadius:6, maxBarThickness:22 }]},
       options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
+        layout:{ padding:{ right:92 } },
         plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){
           var p = agg.csmPods[c.dataIndex]; return fmtPct(p.rate)+" adopted ("+fmtInt(p.adopted)+" of "+fmtInt(p.total)+")";
         } } } },
-        scales:{ x:{ grid:{color:grid}, border:{display:false}, ticks:{callback:function(v){ return v+"%"; }}, suggestedMax:100 },
+        scales:{ x:{ display:false, min:0, suggestedMax:100 },
                  y:{ grid:{display:false}, border:{display:false} } },
         onHover:function(evt, els, chart){ chart.canvas.style.cursor = els.length ? "pointer" : "default"; },
         onClick:function(evt, els){
@@ -1760,7 +1772,23 @@ function renderCharts(agg){
           var p = agg.csmPods[els[0].index];
           openDrilldown({ label:p.label, count:p.members.length, members:p.members });
         } },
-      plugins:[liftShadowPlugin("barLift-csmPod", 8, 3, .2)]
+      plugins:[{
+        id:"csmPodEndLabels",
+        afterDatasetsDraw:function(chart){
+          var meta = chart.getDatasetMeta(0);
+          var ctx = chart.ctx;
+          ctx.save();
+          ctx.font = "600 11px IBM Plex Mono, monospace";
+          ctx.fillStyle = themeColor("--ink");
+          ctx.textAlign = "left"; ctx.textBaseline = "middle";
+          meta.data.forEach(function(bar, i){
+            var p = agg.csmPods[i];
+            if (!p || !bar) return;
+            ctx.fillText(fmtPct(p.rate)+"  ("+fmtInt(p.adopted)+"/"+fmtInt(p.total)+")", bar.x+8, bar.y);
+          });
+          ctx.restore();
+        }
+      }]
     });
   }
  
