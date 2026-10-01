@@ -1943,33 +1943,6 @@ function renderCharts(agg){
           ctx.fillText("adopted", w/2, h/2+14);
           ctx.restore();
         }
-      },
-      {
-        // Draws a tick mark (and label) on the ring at the 65% position --
-        // the same adoption target used throughout the Opportunity section
-        // (agg.opportunity.target65 / need65) -- so this ring shows at a
-        // glance how far the current rate sits from that target.
-        id:"targetTick65",
-        afterDraw:function(chart){
-          var geo = ringGeometry(chart, .6);
-          if (!geo) return;
-          var target = 0.65;
-          var angle = -Math.PI/2 + target*2*Math.PI;
-          var cos = Math.cos(angle), sin = Math.sin(angle);
-          var x1 = geo.cx + cos*(geo.innerR-4), y1 = geo.cy + sin*(geo.innerR-4);
-          var x2 = geo.cx + cos*(geo.outerR+4), y2 = geo.cy + sin*(geo.outerR+4);
-          var ctx = chart.ctx;
-          ctx.save();
-          ctx.strokeStyle = ink; ctx.lineWidth = 2.5; ctx.lineCap = "round";
-          ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-          var lx = geo.cx + cos*(geo.outerR+14), ly = geo.cy + sin*(geo.outerR+14);
-          ctx.font = "600 9.5px IBM Plex Mono, monospace";
-          ctx.fillStyle = themeColor("--ink-soft");
-          ctx.textAlign = cos > 0.15 ? "left" : (cos < -0.15 ? "right" : "center");
-          ctx.textBaseline = "middle";
-          ctx.fillText("65% target", lx, ly);
-          ctx.restore();
-        }
       }
     ]
   });
